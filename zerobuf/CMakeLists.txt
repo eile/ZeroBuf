@@ -8,6 +8,7 @@ set(ZEROBUF_PUBLIC_HEADERS
   NonMovingAllocator.h
   NonMovingBaseAllocator.h
   NonMovingSubAllocator.h
+  ConstNonMovingSubAllocator.h
   Vector.h
   Schema.h
   Types.h
@@ -25,6 +26,7 @@ set(ZEROBUF_SOURCES
   NonMovingAllocator.cpp
   NonMovingBaseAllocator.cpp
   NonMovingSubAllocator.cpp
+  ConstNonMovingSubAllocator.cpp
   Zerobuf.cpp
   jsoncpp/jsoncpp.cpp
   )
@@ -42,7 +44,7 @@ set_source_files_properties(jsoncpp/jsoncpp.cpp PROPERTIES COMPILE_FLAGS
   -Wno-shadow)
 endif()
 
-set(ZEROBUF_LINK_LIBRARIES PUBLIC Servus)
+set(ZEROBUF_LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT} PUBLIC Servus)
 set(ZEROBUF_INCLUDE_NAME zerobuf)
 set(ZEROBUF_OMIT_LIBRARY_HEADER ON)
 common_library(ZeroBuf)
