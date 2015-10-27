@@ -53,15 +53,13 @@ public:
         if( index >= size( ))
             throw std::runtime_error( "Vector out of bounds read" );
 
-        const size_t dynOff = (size_t)_parent->template getDynamicPtr<uint8_t>( _index )
-                              - (size_t)_parent->getData();
+        const uint64_t dynOff = _parent->getDynamicOffset( _index );
 
         ConstNonMovingSubAllocator* constRef =
-                new ConstNonMovingSubAllocator( static_cast<const NonMovingBaseAllocator*>( _parent ),
+                new ConstNonMovingSubAllocator( _parent,
                                                 dynOff + index * _elemSize,
                                                 0,
                                                 _elemSize );
-
         const Q constRefObj( constRef );
         Q copy;
         copy = constRefObj;
@@ -73,7 +71,7 @@ public:
 
     template<class Q = T>
     const typename std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type* data() const
-        { return _parent->template getDynamicPtr< const T >( _index ); }
+        { return _parent->template getDynamic< const T >( _index ); }
 
     template<class Q = T>
     const typename std::enable_if<std::is_base_of<Zerobuf,Q>::value, Q>::type* data() const

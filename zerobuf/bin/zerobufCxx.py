@@ -166,7 +166,7 @@ def emitDynamic( spec ):
         # string
         emitFunction( "std::string",
                       "get" + cxxName + "String() const",
-                      "const uint8_t* ptr = getAllocator()->template getDynamicPtr< " +
+                      "const uint8_t* ptr = getAllocator()->template getDynamic< " +
                       "const uint8_t >( " + str( emit.currentDyn ) + " );\n" +
                       "    return std::string( ptr, ptr + " +
                       "getAllocator()->template getItem< uint64_t >( " +
