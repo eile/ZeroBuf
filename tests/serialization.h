@@ -110,7 +110,7 @@ test::TestSchema getTestObject()
 
     // Non writable copy of the tables are acquired from parent schema
     std::vector< test::TestNested > constTables =
-                        static_cast<const test::TestSchema&>(object).getNestedarrayVector();
+            static_cast<const test::TestSchema&>(object).getNestedarrayVector();
 
     intMagic = 42;
     uintMagic = 43;
