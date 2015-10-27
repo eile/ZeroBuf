@@ -86,7 +86,7 @@ void convertToJSONValue<Zerobuf>( const Allocator* allocator,
         const size_t size = parentAllocator->getDynamicSize( offset ) / schema.staticSize;
         for( size_t i = 0; i < size; ++i )
         {
-            const size_t dynOff = (size_t)parentAllocator->getDynamicPtr<const uint8_t>( offset )
+            const size_t dynOff = (size_t)parentAllocator->getDynamic<const uint8_t>( offset )
                                   - (size_t)parentAllocator->getData();
 
             ConstNonMovingSubAllocator nonMovingAllocator( parentAllocator,
