@@ -31,13 +31,11 @@ public:
      * @param alloc The parent allocator that contains the data.
      * @param index Index of the vector in the parent allocator dynamic storage
      */
-    BaseVector( A* alloc,
-                size_t index,
-                size_t staticSize = sizeof( T ));
+    BaseVector( A* alloc, size_t index, size_t elemSize = sizeof( T ));
     virtual ~BaseVector() {}
 
     template<class Q = T>
-    typename std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type
+    const typename std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type&
     operator[] ( const size_t index ) const
     {
         if( index >= size( ))
@@ -75,7 +73,7 @@ public:
 
     template<class Q = T>
     const typename std::enable_if<std::is_base_of<Zerobuf,Q>::value, Q>::type* data() const
-        { throw std::runtime_error( "For zerobuf objects the raw pointer cannot be retrieved"); }
+        { throw std::runtime_error( "No raw array pointer for Zerobuf elements"); }
 
     bool operator == ( const BaseVector& rhs ) const;
     bool operator != ( const BaseVector& rhs ) const;
@@ -91,12 +89,11 @@ protected:
 
 // Implementation
 template< class A, class T > inline
-BaseVector< A, T >::BaseVector( A* alloc,
-                                const size_t index,
-                                const size_t staticSize )
+BaseVector< A, T >::BaseVector( A* alloc, const size_t index,
+                                const size_t elemSize )
     : _parent( alloc )
     , _index( index )
-    , _elemSize( staticSize )
+    , _elemSize( elemSize )
 {}
 
 
