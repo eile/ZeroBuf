@@ -30,7 +30,6 @@ namespace zerobuf
 class Zerobuf
 {
 public:
-
     virtual servus::uint128_t getZerobufType() const = 0;
     virtual Schema getSchema() const = 0;
 
@@ -55,7 +54,7 @@ public:
 
 protected:
     Zerobuf();
-    explicit Zerobuf( Allocator* alloc );
+    explicit Zerobuf( Allocator* alloc ); // takes ownership of alloc
     Zerobuf( const Zerobuf& zerobuf );
     ZEROBUF_API virtual ~Zerobuf();
 
