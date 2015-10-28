@@ -55,7 +55,7 @@ public:
         // gets until the first set is done, upon which it replaces itself with
         // a copy to a NonMovingAllocator as below:
         const uint8_t* base = _parent->template getDynamic< uint8_t >( _index );
-        NonMovingAllocator* alloc = new NonMovingAllocator( 4 + _elemSize, 0 );
+        NonMovingAllocator* alloc = new NonMovingAllocator( _elemSize, 0 );
 
         alloc->copyBuffer( base + index * _elemSize, _elemSize );
         return Q( alloc );

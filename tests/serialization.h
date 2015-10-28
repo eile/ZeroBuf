@@ -120,7 +120,12 @@ test::TestSchema getTestObject()
         test::TestNested& inner = *it;
         BOOST_CHECK_EQUAL( inner.getIntvalue(), intMagic++ );
         BOOST_CHECK_EQUAL( inner.getUintvalue(), uintMagic++  );
-        BOOST_REQUIRE_THROW( inner.setIntvalue( intMagic ), std::runtime_error );
+
+        inner.setIntvalue( 42 );
+        BOOST_CHECK_EQUAL( inner.getIntvalue(), 42 );
+        BOOST_CHECK_EQUAL(
+            object.getNestedarrayVector()[ intMagic - 43 ].getIntvalue(),
+            intMagic - 1 );
     }
 
     intMagic = 42;
