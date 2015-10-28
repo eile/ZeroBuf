@@ -55,14 +55,14 @@ public:
 protected:
     Zerobuf();
     explicit Zerobuf( Allocator* alloc ); // takes ownership of alloc
-    Zerobuf( const Zerobuf& zerobuf );
+    Zerobuf( const Zerobuf& zerobuf ) = delete;
     ZEROBUF_API virtual ~Zerobuf();
 
     ZEROBUF_API Zerobuf& operator=( const Zerobuf& rhs );
     Allocator* getAllocator();
 
-    ZEROBUF_API void _setZerobufArray( const void* data, const size_t size,
-                                       const size_t arrayNum );
+    ZEROBUF_API void _setZerobufArray( const void* data, size_t size,
+                                       size_t arrayNum );
 private:
     class Impl;
     std::unique_ptr<Impl> _impl;

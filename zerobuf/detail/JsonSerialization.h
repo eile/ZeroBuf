@@ -147,57 +147,6 @@ void fromJSON<servus::uint128_t>( servus::uint128_t& value, const Json::Value& j
  * Gets the value from JSON value, performs necessary conversions and sets the
  * static value into the ZeroBuf allocator, as described by valueSchema.
  */
-<<<<<<< HEAD
-#define convertToJSON(cpptype, jsontype) \
-{ \
-    const std::string& type = std::get< Schema::FIELD_TYPE >( valueSchema ); \
-    if( type == #cpptype ) \
-    { \
-        const size_t offset = \
-            std::get< Schema::FIELD_DATAOFFSET >( valueSchema ); \
-        const size_t size = std::get< Schema::FIELD_SIZE >( valueSchema ); \
-        Json::Value& jsonValue = \
-            rootJSON[std::get< Schema::FIELD_NAME >( valueSchema )]; \
-        \
-        /* static variable */ \
-        if( size == 0 )\
-        { \
-            jsonValue = _toJSON< cpptype, jsontype >(\
-                _alloc->getItem< cpptype >( offset )); \
-        } \
-        /* static array */ \
-        else if( std::get< Schema::FIELD_ISSTATIC >( valueSchema )) \
-        { \
-            const cpptype* ptr = _alloc->getItemPtr< cpptype >( offset ); \
-            jsonValue.resize( static_cast<Json::Value::ArrayIndex>(size) ); \
-            for( size_t i = 0; i < size; ++i ) \
-                jsonValue[uint32_t(i)] = _toJSON< cpptype, jsontype >( ptr[i] ); \
-        } \
-        else \
-        { \
-            /* std::string */ \
-            if( type == "char" ) \
-            { \
-                const uint8_t* ptr = \
-                    _alloc->getDynamic< const uint8_t >( offset ); \
-                const std::string value( \
-                    ptr, ptr + _alloc->getItem< uint64_t >( size )); \
-                if( !value.empty( )) \
-                    jsonValue = _toJSON< std::string, std::string >( value ); \
-            } \
-            /* dynamic array */ \
-            else \
-            { \
-                ConstVector< cpptype > values( _alloc, offset ); \
-                for( size_t i = 0; i < values.size(); ++i ) \
-                { \
-                    jsonValue[uint32_t(i)] = \
-                        _toJSON< cpptype, jsontype >( values[i] ); \
-                } \
-            } \
-        } \
-    } \
-=======
 template< class T >
 void convertStaticFromJSONValue( Allocator* allocator,
                                  const Schema::Field& valueSchema,
@@ -227,7 +176,6 @@ void convertStaticFromJSONValue( Allocator* allocator,
               fromJSON< T >( allocator->getItemPtr< T >( offset )[i++], jsonVal );
         }
     }
->>>>>>> Adding support for static Nested classes
 }
 
 /**

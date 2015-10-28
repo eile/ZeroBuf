@@ -202,12 +202,6 @@ public:
         , _zerobuf( zerobuf )
     {}
 
-    Impl( const Impl& impl )
-        : _alloc( impl._alloc->clone() )
-        , _zerobuf( impl._zerobuf )
-    {
-    }
-
     ~Impl()
     {
         delete _alloc;
@@ -254,7 +248,7 @@ public:
     Impl& operator=( const Impl& rhs )
     {
         const Allocator* from = rhs._alloc;
-        _alloc->copyBuffer( from->getData(),from->getSize( ));
+        _alloc->copyBuffer( from->getData(), from->getSize( ));
         return *this;
     }
 
@@ -286,7 +280,7 @@ void Vector<Zerobuf>::push_back( const Zerobuf& value )
               value.getZerobufSize());
 }
 
-Zerobuf::Zerobuf( )
+Zerobuf::Zerobuf()
     : _impl( new Zerobuf::Impl( *this, 0 ))
 {}
 
@@ -294,15 +288,8 @@ Zerobuf::Zerobuf( Allocator* alloc )
     : _impl( new Zerobuf::Impl( *this, alloc ))
 {}
 
-Zerobuf::Zerobuf( const Zerobuf& zerobuf )
-{
-    if( this != &zerobuf )
-        *_impl = *zerobuf._impl;
-}
-
 Zerobuf::~Zerobuf()
-{
-}
+{}
 
 const void* Zerobuf::getZerobufData() const
 {
