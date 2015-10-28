@@ -197,15 +197,14 @@ def emitVariable( spec ):
     if len( spec ) == 2: # specs with single static
         cxxName = spec[0][0].upper() + spec[0][1:]
         cxxtype = emit.types[ spec[1] ][1]
+        elemSize = emit.types[ spec[1] ][0]
         emit.md5.update( cxxtype.encode('utf-8') )
         if(emit.tables.issuperset([cxxtype])):
             emitFunction( cxxtype, "get" + cxxName + "() const",
-                          "const " + cxxtype + " constRefObj( new ::zerobuf::ConstNonMovingSubAllocator( " +
-                          "    static_cast<const ::zerobuf::NonMovingBaseAllocator*>(getAllocator()), " +
-                          str(emit.offset) + "," + str(0) + "," + str(emit.types[spec[1]][0]) + " ));\n" +
-                          "    " + cxxtype + " copy;\n" +
-                          "    copy = constRefObj;\n" +
-                          "    return copy;" )
+                          "const uint8_t* base = getAllocator()->getData();\n" +
+                          "    ::zerobuf::NonMovingAllocator* alloc = new ::zerobuf::NonMovingAllocator( " + str( elemSize ) + ", 0 );\n" +
+                          "    alloc->copyBuffer( base + " + str( emit.offset ) + ", " + str( elemSize ) + " );\n" +
+                          "    return " + cxxtype + "( alloc );" )
             emitFunction( cxxtype, "get" + cxxName + "() ",
                           "notifyChanging();\n    " +
                           "return " + cxxtype + "( new ::zerobuf::NonMovingSubAllocator( " +
@@ -247,6 +246,7 @@ def emitVariable( spec ):
     else: # static array
         cxxName = spec[0][0].upper() + spec[0][1:]
         cxxtype = emit.types[ spec[2] ][1]
+        elemSize = emit.types[ spec[2] ][0]
         nElems = spec[4]
         emit.md5.update( (cxxtype + nElems).encode('utf-8') )
         nBytes = int(emit.types[ spec[2] ][0]) * int(nElems)
@@ -254,14 +254,13 @@ def emitVariable( spec ):
             emitFunction( "std::vector< " + cxxtype + " >",
                           "get" + cxxName + "Vector() const",
                           "std::vector<" + cxxtype + "> ret;\n" +
+                          "    const uint8_t* base = getAllocator()->getData() + " + str( emit.offset ) + ";\n" +
                           "    for(size_t i = 0; i < " + str(nElems) + "; ++i" + ")\n" +
-                          "        ret.push_back( std::move( " +  cxxtype +
-                          "( new ::zerobuf::ConstNonMovingSubAllocator( " +
-                          "static_cast<const ::zerobuf::NonMovingBaseAllocator*>( getAllocator()), " +
-                          str(emit.offset) + " + i * " + str(emit.types[spec[2]][0]) + "," +
-                          str(0) + "," +
-                          str(emit.types[spec[2]][0]) +
-                          " ))));\n" +
+                          "    {\n" +
+                          "        ::zerobuf::NonMovingAllocator* alloc = new ::zerobuf::NonMovingAllocator( " + str( elemSize ) + ", 0 );\n" +
+                          "        alloc->copyBuffer( base + i * " + str( elemSize ) + ", " + str( elemSize ) + " );\n" +
+                          "        ret.push_back( std::move( " +  cxxtype + "( alloc )));\n" +
+                          "    }\n" +
                           "    return ret;"
                           )
             emitFunction( "std::vector< " + cxxtype + " >",
