@@ -7,7 +7,7 @@
 #define ZEROBUF_BASEVECTOR_H
 
 #include <zerobuf/Types.h>
-#include <zerobuf/ConstNonMovingSubAllocator.h>
+#include <zerobuf/NonMovingAllocator.h>
 #include <zerobuf/Zerobuf.h>
 
 #include <cstring> // memcmp
@@ -51,17 +51,14 @@ public:
         if( index >= size( ))
             throw std::runtime_error( "Vector out of bounds read" );
 
-        const uint64_t dynOff = _parent->getDynamicOffset( _index );
+        // TODO OPT: Create a COW allocator, which uses the existing memory for
+        // gets until the first set is done, upon which it replaces itself with
+        // a copy to a NonMovingAllocator as below:
+        const uint8_t* base = _parent->template getDynamic< uint8_t >( _index );
+        NonMovingAllocator* alloc = new NonMovingAllocator( 4 + _elemSize, 0 );
 
-        ConstNonMovingSubAllocator* constRef =
-                new ConstNonMovingSubAllocator( _parent,
-                                                dynOff + index * _elemSize,
-                                                0,
-                                                _elemSize );
-        const Q constRefObj( constRef );
-        Q copy;
-        copy = constRefObj;
-        return copy;
+        alloc->copyBuffer( base + index * _elemSize, _elemSize );
+        return Q( alloc );
     }
 
     bool empty() const { return _getSize() == 0; }
