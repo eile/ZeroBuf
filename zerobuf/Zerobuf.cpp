@@ -194,9 +194,9 @@ JSONRegisterer< Zerobuf > registerJSON( "Zerobuf" );
 
 }
 
-struct Zerobuf::Impl
+class Zerobuf::Impl
 {
-
+public:
     Impl( Zerobuf& zerobuf, Allocator* allocator )
         : _alloc( allocator )
         , _zerobuf( zerobuf )
