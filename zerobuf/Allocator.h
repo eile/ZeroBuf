@@ -28,9 +28,12 @@ public:
     virtual size_t getSize() const = 0;
     virtual void copyBuffer( const void* data, size_t size ) = 0;
 
-    /** Update allocation of the dynamic elem @arg index to have newSize bytes.
-     * Updates the offset and size fields in the static section as needed.
+    /**
+     * Update allocation of the dynamic elem at index to have newSize bytes.
+     *
+     * The offset and size fields in the static section are updated as needed.
      * Does not copy the old data to the new location.
+     *
      * @return the pointer to the elem at the new place.
      */
     virtual uint8_t* updateAllocation( size_t index,  size_t newSize ) = 0;

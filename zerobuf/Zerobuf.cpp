@@ -5,268 +5,101 @@
 
 #include "Zerobuf.h"
 
-#include "detail/JsonSerialization.h"
-#include "ConstNonMovingSubAllocator.h"
+#include "ConstVector.h"
 #include "NonMovingSubAllocator.h"
 #include "Schema.h"
+#include "StaticSubAllocator.h"
 #include "Vector.h"
-#include "ConstVector.h"
+#include "detail/JsonSerialization.h"
+#include <zerobuf/version.h>
 
 #include <iostream>
 
 namespace zerobuf
 {
 
-namespace detail
-{
-
-template<>
-void convertStaticToJSONValue<Zerobuf>( const Allocator* allocator,
-                                        const Schema::Field& valueSchema,
-                                        Json::Value& value )
-{
-    const size_t offset =
-        std::get< Schema::FIELD_DATAOFFSET >( valueSchema );
-    const size_t size = std::get< Schema::FIELD_SIZE >( valueSchema );
-    const Schema::SchemaFunction& schemaFunc =
-            std::get< Schema::FIELD_SCHEMAFUNC >( valueSchema );
-
-    const Schema& schema = schemaFunc();
-    const size_t staticSize = schema.staticSize;
-
-    const NonMovingBaseAllocator* parentAllocator =
-               static_cast< const NonMovingBaseAllocator* >( allocator );
-
-    if( size == 0 )
-    {
-        ConstNonMovingSubAllocator nonMovingAllocator( parentAllocator,
-                                                       offset,
-                                                       0,
-                                                       schema.staticSize );
-
-        detail::toJSONValue( &nonMovingAllocator, schema, value );
-
-    }
-    else /* static array */
-    if( std::get< Schema::FIELD_ISSTATIC >( valueSchema ))
-    {
-        for( size_t i = 0; i < size; ++i )
-        {
-            ConstNonMovingSubAllocator nonMovingAllocator( parentAllocator,
-                                                           offset + i * staticSize,
-                                                           0,
-                                                           schema.staticSize );
-            Json::Value jsonVal;
-            detail::toJSONValue( &nonMovingAllocator, schema, jsonVal );
-            value.append( jsonVal );
-        }
-    }
-}
-
-template<>
-void convertToJSONValue<Zerobuf>( const Allocator* allocator,
-                                  const Schema::Field& valueSchema,
-                                  Json::Value& value )
-{
-    if( std::get< Schema::FIELD_ISSTATIC >( valueSchema ))
-       convertStaticToJSONValue<Zerobuf>( allocator, valueSchema, value );
-    else /* dynamic variables */
-    {
-        const size_t offset =
-            std::get< Schema::FIELD_DATAOFFSET >( valueSchema );
-
-        const Schema::SchemaFunction& schemaFunc =
-                std::get< Schema::FIELD_SCHEMAFUNC >( valueSchema );
-
-        const Schema& schema = schemaFunc();
-
-        const NonMovingBaseAllocator* parentAllocator =
-                   static_cast< const NonMovingBaseAllocator* >( allocator );
-
-        const size_t size = parentAllocator->getDynamicSize( offset ) / schema.staticSize;
-        for( size_t i = 0; i < size; ++i )
-        {
-            const size_t dynOff = (size_t)parentAllocator->getDynamic<const uint8_t>( offset )
-                                  - (size_t)parentAllocator->getData();
-
-            ConstNonMovingSubAllocator nonMovingAllocator( parentAllocator,
-                                                           dynOff + i * schema.staticSize,
-                                                           0,
-                                                           schema.staticSize );
-
-            detail::toJSONValue( &nonMovingAllocator, schema,  value[uint32_t(i)] );
-        }
-
-    }
-}
-
-template<>
-void convertStaticFromJSONValue<Zerobuf>( Allocator* allocator,
-                                          const Schema::Field& valueSchema,
-                                          const Json::Value& value )
-{
-    const size_t offset =
-        std::get< Schema::FIELD_DATAOFFSET >( valueSchema );
-    const size_t size =
-        std::get< Schema::FIELD_SIZE >( valueSchema );
-
-    const Schema::SchemaFunction& schemaFunc =
-           std::get< Schema::FIELD_SCHEMAFUNC >( valueSchema );
-
-    const Schema& schema = schemaFunc();
-    const size_t staticSize = schema.staticSize;
-
-    NonMovingBaseAllocator* parentAllocator =
-               static_cast< NonMovingBaseAllocator* >( allocator );
-
-    if( size == 0 )
-    {
-        NonMovingSubAllocator nonMovingAllocator( parentAllocator,
-                                                  offset,
-                                                  0,
-                                                  schema.staticSize );
-
-        detail::fromJSONValue( &nonMovingAllocator, schema, value );
-    }
-    /* static array */
-    else if( std::get< Schema::FIELD_ISSTATIC >( valueSchema ))
-    {
-        if( value.size() > size )
-        {
-            const std::string& key = std::get< Schema::FIELD_NAME >( valueSchema );
-            std::cerr << "fromJSON: JSON array '" << key
-                      << "' too big; got " << value.size()
-                      << ", allowed is " << size << std::endl;
-        }
-        else
-        {
-            size_t i = 0;
-            for( const auto& jsonVal : value )
-            {
-                NonMovingSubAllocator nonMovingAllocator( parentAllocator,
-                                                          offset + i * staticSize,
-                                                          0,
-                                                          schema.staticSize );
-                detail::fromJSONValue( &nonMovingAllocator, schema, jsonVal );
-                ++i;
-            }
-        }
-    }
-}
-
-template<>
-void convertFromJSONValue<Zerobuf>( Allocator* allocator,
-                                    const Schema::Field& valueSchema,
-                                    const Json::Value& value )
-{
-    /* static variable(s) */
-    if( std::get< Schema::FIELD_ISSTATIC >( valueSchema ))
-        convertStaticFromJSONValue<Zerobuf>( allocator, valueSchema, value );
-    else /* dynamic variables */
-    {
-        NonMovingBaseAllocator* parentAllocator =
-                   static_cast< NonMovingBaseAllocator* >( allocator );
-
-        const size_t offset =
-            std::get< Schema::FIELD_DATAOFFSET >( valueSchema );
-
-        const Schema::SchemaFunction& schemaFunc =
-                std::get< Schema::FIELD_SCHEMAFUNC >( valueSchema );
-
-        const Schema& schema = schemaFunc();
-
-        const size_t size = parentAllocator->getDynamicSize( offset ) / schema.staticSize;
-        for( size_t i = 0; i < size; ++i )
-        {
-            NonMovingSubAllocator nonMovingAllocator( parentAllocator,
-                                                      i,
-                                                      size,
-                                                      schema.staticSize );
-
-            detail::fromJSONValue( &nonMovingAllocator, schema,  value[ uint32_t(i) ] );
-        }
-    }
-
-}
-
-
-JSONRegisterer< Zerobuf > registerJSON( "Zerobuf" );
-
-}
-
 class Zerobuf::Impl
 {
 public:
     Impl( Zerobuf& zerobuf, Allocator* allocator )
-        : _alloc( allocator )
+        : alloc( allocator )
         , _zerobuf( zerobuf )
     {}
 
-    ~Impl()
-    {
-        delete _alloc;
-    }
-
     const void* getZerobufData() const
     {
-        return _alloc ? _alloc->getData() : 0;
+        return alloc ? alloc->getData() : 0;
     }
 
     size_t getZerobufSize() const
     {
-        return _alloc ? _alloc->getSize() : 0;
+        return alloc ? alloc->getSize() : 0;
     }
 
     void setZerobufData( const void* data, size_t size )
     {
-        if( _alloc )
-            _alloc->copyBuffer( data, size );
-        else
-            throw std::runtime_error( "Can't copy data into empty zerobuf" );
-    }
-
-    void toJSON( Json::Value& rootJSON ) const
-    {
-        detail::toJSONValue( _alloc, _zerobuf.getSchema(), rootJSON );
+        if( !alloc )
+            throw std::runtime_error(
+                "Can't copy data into empty Zerobuf object" );
+        alloc->copyBuffer( data, size );
     }
 
     std::string toJSONString() const
     {
+        if( !alloc )
+            throw std::runtime_error(
+                "Can't convert empty Zerobuf object to JSON" );
+
         Json::Value rootJSON;
-        toJSON( rootJSON );
+        detail::toJSONValue( alloc, _zerobuf.getSchema(), rootJSON );
         return rootJSON.toStyledString();
     }
 
     void fromJSON( const std::string& json )
     {
+        if( !alloc )
+            throw std::runtime_error(
+                "Can't convert empty Zerobuf object from JSON" );
+
         Json::Value rootJSON;
         Json::Reader reader;
         reader.parse( json, rootJSON );
-        detail::fromJSONValue( _alloc, _zerobuf.getSchema(), rootJSON );
+        detail::fromJSONValue( alloc, _zerobuf.getSchema(), rootJSON );
     }
 
-    Impl& operator=( const Impl& rhs )
+    Impl& operator = ( const Impl& rhs )
     {
-        const Allocator* from = rhs._alloc;
-        _alloc->copyBuffer( from->getData(), from->getSize( ));
+        if( !alloc )
+            throw std::runtime_error(
+                "Can't copy data into empty Zerobuf object" );
+
+        const Allocator* from = rhs.alloc;
+        if( !from )
+            throw std::runtime_error(
+                "Can't copy data from empty Zerobuf object" );
+
+        alloc->copyBuffer( from->getData(), from->getSize( ));
         return *this;
     }
 
-    void setZerobufArray( const void* data,
-                          const size_t size,
+    void setZerobufArray( const void* data, const size_t size,
                           const size_t arrayNum )
     {
-        void* array = _alloc->updateAllocation( arrayNum, size );
+        if( !alloc )
+            throw std::runtime_error(
+                "Can't copy data into empty Zerobuf object" );
+
+        void* array = alloc->updateAllocation( arrayNum, size );
         ::memcpy( array, data, size );
     }
 
-    Allocator* _alloc;
+    Allocator* alloc;
     Zerobuf& _zerobuf;
 
 };
 
 template<>
-void Vector<Zerobuf>::push_back( const Zerobuf& value )
+void Vector< Zerobuf >::push_back( const Zerobuf& value )
 {
     const size_t size_ =  Super::_getSize();
     const uint8_t* oldPtr = reinterpret_cast<const uint8_t*>( data( ));
@@ -286,10 +119,38 @@ Zerobuf::Zerobuf()
 
 Zerobuf::Zerobuf( Allocator* alloc )
     : _impl( new Zerobuf::Impl( *this, alloc ))
-{}
+{
+    uint32_t& version = alloc->getItem< uint32_t >( 0 );
+    version = ZEROBUF_VERSION_ABI;
+}
+
+Zerobuf::Zerobuf( Zerobuf&& from )
+    : _impl( std::move( from._impl ))
+{
+    from._impl.reset( new Zerobuf::Impl( from, 0 ));
+}
 
 Zerobuf::~Zerobuf()
 {}
+
+Zerobuf& Zerobuf::operator = ( const Zerobuf& rhs )
+{
+    if( this != &rhs )
+        *_impl = *rhs._impl;
+    return *this;
+}
+
+Zerobuf& Zerobuf::operator = ( Zerobuf&& rhs )
+{
+    if( this == &rhs )
+        return *this;
+    if( getZerobufType() != rhs.getZerobufType( ))
+        throw std::runtime_error( "Can't assign Zerobuf of a different type" );
+
+    *_impl = std::move( *rhs._impl );
+    rhs._impl.reset( new Zerobuf::Impl( rhs, 0 ));
+    return *this;
+}
 
 const void* Zerobuf::getZerobufData() const
 {
@@ -330,25 +191,15 @@ bool Zerobuf::operator != ( const Zerobuf& rhs ) const
     return !(*this == rhs);
 }
 
-Zerobuf& Zerobuf::operator = ( const Zerobuf& rhs )
-{
-    if( this == &rhs )
-        return *this;
-
-    notifyChanging();
-    *_impl = *rhs._impl;
-    return *this;
-}
-
 Allocator* Zerobuf::getAllocator()
 {
     notifyChanging();
-    return _impl->_alloc;
+    return _impl->alloc;
 }
 
 const Allocator* Zerobuf::getAllocator() const
 {
-    return _impl->_alloc;
+    return _impl->alloc;
 }
 
 void Zerobuf::_setZerobufArray( const void* data, const size_t size,

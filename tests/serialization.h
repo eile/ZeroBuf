@@ -63,9 +63,18 @@ test::TestSchema getTestObject()
 
     // Write nested table using a stack object
     test::TestNested nested;
-    nested.setIntvalue( intMagic );
-    nested.setUintvalue( uintMagic );
+    nested.setIntvalue( intMagic - 1 );
+    nested.setUintvalue( uintMagic - 1 );
+    BOOST_CHECK_EQUAL( nested.getIntvalue(), intMagic - 1 );
+    BOOST_CHECK_EQUAL( nested.getUintvalue(), uintMagic - 1 );
+
     object.setNested( nested );
+    BOOST_CHECK_EQUAL( object.getNested().getIntvalue(), intMagic - 1 );
+    BOOST_CHECK_EQUAL( object.getNested().getUintvalue(), uintMagic - 1 );
+
+    const test::TestSchema& constObject = object;
+    BOOST_CHECK_EQUAL( constObject.getNested().getIntvalue(), intMagic - 1  );
+    BOOST_CHECK_EQUAL( constObject.getNested().getUintvalue(), uintMagic - 1 );
 
     // Writable copy of the table is acquired from parent schema
     test::TestNested mutableNested = object.getNested();
@@ -77,7 +86,6 @@ test::TestSchema getTestObject()
     BOOST_CHECK_EQUAL( object.getNested().getUintvalue(), uintMagic  );
 
     // Non writable copy of the table is acquired from parent schema
-    const test::TestSchema& constObject = object;
     const test::TestNested& constNested = constObject.getNested();
     BOOST_CHECK_EQUAL( constNested.getIntvalue(), intMagic  );
     BOOST_CHECK_EQUAL( constNested.getUintvalue(), uintMagic  );
@@ -95,29 +103,27 @@ test::TestSchema getTestObject()
     BOOST_CHECK_EQUAL( object.getNested().getUintvalue(), uintMagic  );
 
     // Writable copy of the table is acquired from parent schema
-    std::vector< test::TestNested > nonConstTables =
+    std::vector< test::TestNested > nestedArray =
                                         object.getNestedarrayVector();
 
     intMagic = 42;
     uintMagic = 43;
-
-    for( std::vector< test::TestNested >::iterator it = nonConstTables.begin();
-         it != nonConstTables.end(); ++it )
+    for( test::TestNested& inner : nestedArray )
     {
-        test::TestNested& inner = *it;
         inner.setIntvalue( intMagic++ );
         inner.setUintvalue( uintMagic++ );
+        BOOST_CHECK_EQUAL(
+            object.getNestedarrayVector()[ intMagic - 43 ].getIntvalue(),
+            intMagic - 1 );
     }
 
     // Non writable copy of the tables are acquired from parent schema
-    std::vector< test::TestNested > constTables =
+    std::vector< test::TestNested > constArray =
                                         constObject.getNestedarrayVector();
     intMagic = 42;
     uintMagic = 43;
-    for( std::vector< test::TestNested >::iterator it = constTables.begin();
-         it != constTables.end(); ++it )
+    for( test::TestNested& inner : constArray )
     {
-        test::TestNested& inner = *it;
         BOOST_CHECK_EQUAL( inner.getIntvalue(), intMagic++ );
         BOOST_CHECK_EQUAL( inner.getUintvalue(), uintMagic++  );
 
@@ -133,7 +139,7 @@ test::TestSchema getTestObject()
 
     // Writable nested tables
     std::vector< test::TestNested > nesteds;
-    for( size_t i = 0; i < constTables.size(); ++i  )
+    for( size_t i = 0; i < constArray.size(); ++i  )
     {
         test::TestNested inner;
         inner.setIntvalue( intMagic++ );
