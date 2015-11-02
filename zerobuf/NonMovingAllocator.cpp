@@ -18,10 +18,7 @@ NonMovingAllocator::NonMovingAllocator( const size_t staticSize,
     : NonMovingBaseAllocator( staticSize, numDynamic )
     , _data( (uint8_t*)::calloc( 1, staticSize ))
     , _size( staticSize )
-{
-    uint32_t& version = getItem< uint32_t >( 0 );
-    version = ZEROBUF_VERSION_ABI;
-}
+{}
 
 NonMovingAllocator::NonMovingAllocator( const NonMovingAllocator& from )
     : NonMovingBaseAllocator( from )

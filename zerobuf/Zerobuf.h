@@ -30,6 +30,11 @@ namespace zerobuf
 class Zerobuf
 {
 public:
+    Zerobuf( Zerobuf&& from );
+
+    ZEROBUF_API Zerobuf& operator = ( const Zerobuf& rhs );
+    ZEROBUF_API Zerobuf& operator = ( Zerobuf&& rhs );
+
     virtual servus::uint128_t getZerobufType() const = 0;
     virtual Schema getSchema() const = 0;
 
@@ -58,7 +63,6 @@ protected:
     Zerobuf( const Zerobuf& zerobuf ) = delete;
     ZEROBUF_API virtual ~Zerobuf();
 
-    ZEROBUF_API Zerobuf& operator=( const Zerobuf& rhs );
     Allocator* getAllocator();
 
     ZEROBUF_API void _setZerobufArray( const void* data, size_t size,

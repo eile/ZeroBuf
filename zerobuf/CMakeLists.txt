@@ -5,19 +5,19 @@ set(ZEROBUF_PUBLIC_HEADERS
   BaseVector.h
   ConstVector.h
   Generic.h
-  NonMovingAllocator.h
-  NonMovingBaseAllocator.h
-  NonMovingSubAllocator.h
-  ConstNonMovingSubAllocator.h
-  Vector.h
   Schema.h
   Types.h
+  Vector.h
   Zerobuf.h
   jsoncpp/json/json-forwards.h
   )
 
 set(ZEROBUF_HEADERS
   detail/JsonSerialization.h
+  NonMovingAllocator.h
+  NonMovingBaseAllocator.h
+  NonMovingSubAllocator.h
+  StaticSubAllocator.h
   jsoncpp/json/json.h
   )
 
@@ -26,7 +26,7 @@ set(ZEROBUF_SOURCES
   NonMovingAllocator.cpp
   NonMovingBaseAllocator.cpp
   NonMovingSubAllocator.cpp
-  ConstNonMovingSubAllocator.cpp
+  StaticSubAllocator.cpp
   Zerobuf.cpp
   jsoncpp/jsoncpp.cpp
   )
@@ -49,8 +49,10 @@ set(ZEROBUF_INCLUDE_NAME zerobuf)
 set(ZEROBUF_OMIT_LIBRARY_HEADER ON)
 common_library(ZeroBuf)
 
-configure_file(${CMAKE_CURRENT_LIST_DIR}/share/zerobuf/CMake/zerobufGenerateCxx.cmake
-  ${PROJECT_BINARY_DIR}/${CMAKE_MODULE_INSTALL_PATH}/zerobufGenerateCxx.cmake COPYONLY)
+configure_file(
+  ${CMAKE_CURRENT_LIST_DIR}/share/zerobuf/CMake/zerobufGenerateCxx.cmake
+  ${PROJECT_BINARY_DIR}/${CMAKE_MODULE_INSTALL_PATH}/zerobufGenerateCxx.cmake
+  COPYONLY)
 configure_file(${CMAKE_CURRENT_LIST_DIR}/bin/zerobufCxx.py
   ${PROJECT_BINARY_DIR}/bin/zerobufCxx.py COPYONLY)
 

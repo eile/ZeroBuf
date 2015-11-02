@@ -22,10 +22,10 @@ class Vector : public BaseVector< Allocator, T >
 
 public:
     /**
-     * @param alloc The parent allocator that contains the data.
+     * @param parent The parent allocator that contains the data.
      * @param index Index of the vector in the parent allocator dynamic storage
      */
-    Vector( Allocator* alloc, size_t index, size_t staticSize = sizeof( T ));
+    Vector( Allocator* parent, size_t index, size_t staticSize = sizeof( T ));
     ~Vector() {}
 
     void push_back( const T& value );
@@ -41,10 +41,9 @@ private:
 
 // Implementation
 template< class T > inline
-Vector< T >::Vector( Allocator* alloc,
-                     const size_t index,
-                     const size_t staticSize )
-    : BaseVector< Allocator, T >( alloc, index, staticSize )
+Vector< T >::Vector( Allocator* parent, const size_t index,
+                     const size_t elemSize )
+    : BaseVector< Allocator, T >( parent, index, elemSize )
 {}
 
 template< class T > inline
