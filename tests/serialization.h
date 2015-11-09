@@ -103,8 +103,8 @@ test::TestSchema getTestObject()
     BOOST_CHECK_EQUAL( object.getNested().getUintvalue(), uintMagic  );
 
     // Writable copy of the table is acquired from parent schema
-    std::vector< test::TestNested > nestedArray =
-                                        object.getNestedarrayVector();
+    std::array< test::TestNested, 4 >& nestedArray = object.getNestedarray();
+    BOOST_CHECK_EQUAL( nestedArray.size(), 4 );
 
     intMagic = 42;
     uintMagic = 43;
@@ -113,24 +113,25 @@ test::TestSchema getTestObject()
         inner.setIntvalue( intMagic++ );
         inner.setUintvalue( uintMagic++ );
         BOOST_CHECK_EQUAL(
-            object.getNestedarrayVector()[ intMagic - 43 ].getIntvalue(),
+            object.getNestedarray()[ intMagic - 43 ].getIntvalue(),
             intMagic - 1 );
     }
 
     // Non writable copy of the tables are acquired from parent schema
-    std::vector< test::TestNested > constArray =
-                                        constObject.getNestedarrayVector();
+    const std::array< test::TestNested, 4 >& constArray =
+                                                   constObject.getNestedarray();
     intMagic = 42;
     uintMagic = 43;
-    for( test::TestNested& inner : constArray )
+    for( const test::TestNested& inner : constArray )
     {
         BOOST_CHECK_EQUAL( inner.getIntvalue(), intMagic++ );
         BOOST_CHECK_EQUAL( inner.getUintvalue(), uintMagic++  );
 
-        inner.setIntvalue( 42 );
-        BOOST_CHECK_EQUAL( inner.getIntvalue(), 42 );
+        test::TestNested copy( inner );
+        copy.setIntvalue( 42 );
+        BOOST_CHECK_EQUAL( copy.getIntvalue(), 42 );
         BOOST_CHECK_EQUAL(
-            object.getNestedarrayVector()[ intMagic - 43 ].getIntvalue(),
+            object.getNestedarray()[ intMagic - 43 ].getIntvalue(),
             intMagic - 1 );
     }
 
@@ -138,13 +139,11 @@ test::TestSchema getTestObject()
     uintMagic = 43;
 
     // Writable nested tables
-    std::vector< test::TestNested > nesteds;
-    for( size_t i = 0; i < constArray.size(); ++i  )
+    std::array< test::TestNested, 4 > nesteds;
+    for( test::TestNested& inner : nesteds )
     {
-        test::TestNested inner;
         inner.setIntvalue( intMagic++ );
         inner.setUintvalue( uintMagic++ );
-        nesteds.push_back( inner );
     }
     object.setNestedarray( nesteds );
 
@@ -152,15 +151,15 @@ test::TestSchema getTestObject()
     uintMagic = 43;
 
     // Setting dynamic tables
-    nesteds.clear();
+    std::vector< test::TestNested > nestedDyn;
     for( size_t i = 0; i < 2; ++i  )
     {
         test::TestNested inner;
         inner.setIntvalue( intMagic++ );
         inner.setUintvalue( uintMagic++ );
-        nesteds.push_back( inner );
+        nestedDyn.push_back( inner );
     }
-    object.setNesteddynamic( nesteds );
+    object.setNesteddynamic( nestedDyn );
 
     return object;
 }
@@ -192,24 +191,12 @@ void checkTestObject( const test::TestSchema& object )
     BOOST_CHECK_EQUAL( nested.getIntvalue(), 42  );
     BOOST_CHECK_EQUAL( nested.getUintvalue(), 43  );
 
-    std::vector< test::TestNested > tables = object.getNestedarrayVector();
+    const auto& tables = object.getNestedarray();
 
     // Test retrieved tables
     int32_t intMagic = 42;
     uint32_t uintMagic = 43;
-    for( std::vector< test::TestNested >::iterator it = tables.begin();
-         it != tables.end(); ++it )
-    {
-        test::TestNested& inner = *it;
-        BOOST_CHECK_EQUAL( inner.getIntvalue(), intMagic++ );
-        BOOST_CHECK_EQUAL( inner.getUintvalue(), uintMagic++  );
-    }
-
-    // Test retrieved dynamic tables vector
-    intMagic = 42;
-    uintMagic = 43;
-    const auto& tablesDynamicVector = object.getNestedarrayVector();
-    for( const test::TestNested& inner : tablesDynamicVector )
+    for( const auto& inner : tables )
     {
         BOOST_CHECK_EQUAL( inner.getIntvalue(), intMagic++ );
         BOOST_CHECK_EQUAL( inner.getUintvalue(), uintMagic++  );
