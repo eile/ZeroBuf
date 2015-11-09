@@ -12,7 +12,11 @@
 
 BOOST_AUTO_TEST_CASE(checkDefault)
 {
-    checkTestObject( getTestObject( ));
+    const test::TestSchema& schema = getTestObject();
+    checkTestObject( schema );
+
+    const test::TestSchema copy( schema );
+    checkTestObject( copy );
 }
 
 BOOST_AUTO_TEST_CASE(test_string)

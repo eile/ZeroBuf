@@ -423,7 +423,7 @@ def emit():
                           initializers + "    {}\n" )
             emitFunction( None,
                           item[1] + "( const " + item[1] +"& from )",
-                          ": zerobuf::Zerobuf( new ::zerobuf::NonMovingAllocator( " + str(emit.offset) + ", " + str(emit.numDynamic) + " ))\n" +
+                          ": zerobuf::Zerobuf( new ::zerobuf::NonMovingAllocator( " + str(emit.offset) + ", " + str(emit.numDynamic) + " ))\n" + initializers +
                           "{\n" +
                           "    *this = from;\n" +
                           "}\n",
