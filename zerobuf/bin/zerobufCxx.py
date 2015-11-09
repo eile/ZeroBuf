@@ -256,19 +256,18 @@ def emitStaticArray( spec ):
     emit.md5.update( (cxxtype + str( nElems )).encode('utf-8') )
 
     if( cxxtype in emit.tables ):
-        emitFunction( "const std::array< {0}, {1} >&".format( cxxtype, nElems ),
+        header.write( "    typedef std::array< {0}, {1} > {2};\n".
+                      format( cxxtype, nElems, cxxName ))
+        emitFunction( "const {0}::{1}&".format( emit.table, cxxName ),
                       "get" + cxxName + "() const",
                       "return _{0};".format( cxxname ))
-        emitFunction( "std::array< {0}, {1} >&".format( cxxtype, nElems ),
+        emitFunction( "{0}::{1}&".format( emit.table, cxxName ),
                       "get" + cxxName + "()",
                       "return _{0};".format( cxxname ))
         emitFunction( "void",
-                      "set{0}( const std::array < {1}, {2} >& value )".
-                      format( cxxName, cxxtype, nElems ),
                       "notifyChanging();\n    " +
                       "_{0} = value;".format( cxxname ))
-        emit.members.append( "std::array< {0}, {1} > _{2};".
-                             format( cxxtype, nElems, cxxname ));
+        emit.members.append( "{0} _{1};".format( cxxName, cxxname ));
         initializer = "_{0}{1}".format( cxxname, "{{" );
         for i in range( 0, nElems ):
             initializer += "\n        {0}( new ::zerobuf::StaticSubAllocator( getAllocator(), {1}, {2} )){3} ".format( cxxtype, emit.offset + i * elemSize, elemSize, "}}" if i == nElems - 1 else "," )

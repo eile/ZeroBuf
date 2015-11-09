@@ -191,9 +191,8 @@ void checkTestObject( const test::TestSchema& object )
     BOOST_CHECK_EQUAL( nested.getIntvalue(), 42  );
     BOOST_CHECK_EQUAL( nested.getUintvalue(), 43  );
 
-    const auto& tables = object.getNestedarray();
-
     // Test retrieved tables
+    const auto& tables = object.getNestedarray();
     int32_t intMagic = 42;
     uint32_t uintMagic = 43;
     for( const auto& inner : tables )
