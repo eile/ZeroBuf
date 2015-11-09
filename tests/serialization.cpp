@@ -22,7 +22,11 @@ BOOST_AUTO_TEST_CASE(defaultValues)
 
 BOOST_AUTO_TEST_CASE(initialized)
 {
-    checkTestObject( getTestObject( ));
+    const test::TestSchema& schema = getTestObject();
+    checkTestObject( schema );
+
+    const test::TestSchema copy( schema );
+    checkTestObject( copy );
 }
 
 BOOST_AUTO_TEST_CASE(test_string)
