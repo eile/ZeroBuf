@@ -77,7 +77,7 @@ test::TestSchema getTestObject()
     BOOST_CHECK_EQUAL( constObject.getNested().getUintvalue(), uintMagic - 1 );
 
     // Writable copy of the table is acquired from parent schema
-    test::TestNested mutableNested = object.getNested();
+    test::TestNested& mutableNested = object.getNested();
     mutableNested.setIntvalue( intMagic );
     mutableNested.setUintvalue( uintMagic );
     BOOST_CHECK_EQUAL( mutableNested.getIntvalue(), intMagic  );

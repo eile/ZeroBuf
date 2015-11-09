@@ -23,6 +23,7 @@
 
 import argparse
 import hashlib
+import re
 from pyparsing import *
 from sys import stdout, stderr, argv, exit
 from os import path
@@ -89,17 +90,19 @@ def countDynamic( specs ):
     return numDynamic
 
 def emitFunction( retVal, function, body, static=False, explicit=False ):
+    # remove default params for implementation definition
+    implFunc = re.sub( r"=.*?(\(.*?\))?([,)])", r"\2", function )
     if retVal: # '{}'-less body
         header.write( "    {0}{1} {2};\n".
                       format( "static " if static else "", retVal, function ))
         impl.write( "\n" + retVal + " " + emit.table +
-                    "::" + function + "\n{\n    " + body +
-                    "\n}\n\n" )
+                    "::" + implFunc + "\n{\n    " + body +
+                    "\n}\n" )
     else:      # ctor '[initializer list]{ body }'
         header.write( "    {0}{1};\n".
                       format( "explicit " if explicit else "", function ))
         impl.write( "\n" + emit.table +
-                    "::" + function + "\n    " + body + "\n\n" )
+                    "::" + implFunc + "\n    " + body + "\n\n" )
 
 def emitDynamic( spec ):
     if not isDynamic( spec ):
@@ -197,7 +200,8 @@ def emitDynamic( spec ):
     impl.write( "\n" )
 
 def emitStaticMember( spec ):
-    cxxName = spec[0][0].upper() + spec[0][1:]
+    cxxname = spec[0]
+    cxxName = cxxname[0].upper() + cxxname[1:]
     cxxtype = emit.types[ spec[1] ][1]
     elemSize = emit.types[ spec[1] ][0]
     if len(spec) == 3:
@@ -206,19 +210,18 @@ def emitStaticMember( spec ):
     emit.md5.update( cxxtype.encode('utf-8') )
 
     if( cxxtype in emit.tables ):
-        emitFunction( cxxtype, "get" + cxxName + "() const",
-                      "const uint8_t* base = getAllocator()->getData();\n" +
-                      "    ::zerobuf::NonMovingAllocator* alloc = new ::zerobuf::NonMovingAllocator( " + str( elemSize ) + ", 0 );\n" +
-                      "    alloc->copyBuffer( base + " + str( emit.offset ) + ", " + str( elemSize ) + " );\n" +
-                      "    return " + cxxtype + "( alloc );" )
-        emitFunction( cxxtype, "get" + cxxName + "() ",
-                      "return " + cxxtype + "( new ::zerobuf::StaticSubAllocator( getAllocator(), " + str( emit.offset ) + ", " + str( elemSize ) + " ));" )
+        emitFunction( "const {0}&".format( cxxtype ),
+                      "get" + cxxName + "() const",
+                      "return _{0};".format( cxxname ))
+        emitFunction( "{0}&".format( cxxtype ), "get" + cxxName + "()",
+                      "return _{0};".format( cxxname ))
         emitFunction( "void",
                       "set"  + cxxName + "( const " + cxxtype + "& value )",
-                      "notifyChanging();\n    " +
-                      "void* data = getAllocator()->getData() + " + str( emit.offset ) + ";\n" +
-                      "    ::memcpy( data, value.getZerobufData(), " + str( elemSize ) + ");" )
-
+                      "_{0} = value;".format( cxxname ))
+        emit.members.append( "{0} _{1};".format( cxxtype, cxxname ));
+        emit.initializers.append(
+            "_{0}( new ::zerobuf::StaticSubAllocator( getAllocator(), {1}, {2} ))".
+            format( cxxname, emit.offset, elemSize ))
     else:
         emitFunction( cxxtype, "get" + cxxName + "() const",
                       "return getAllocator()->template getItem< " + cxxtype +
@@ -243,7 +246,8 @@ def emitStaticMember( spec ):
     emit.offset += elemSize
 
 def emitStaticArray( spec ):
-    cxxName = spec[0][0].upper() + spec[0][1:]
+    cxxname = spec[0]
+    cxxName = cxxname[0].upper() + cxxname[1:]
     cxxtype = emit.types[ spec[2] ][1]
     elemSize = emit.types[ spec[2] ][0]
     nElems = spec[4]
@@ -290,6 +294,8 @@ def emitStaticArray( spec ):
                       "        ::memcpy( data  + i * " + str( elemSize ) +
                       ", value[i].getZerobufData(), " + str( elemSize ) +
                       " );" )
+        emit.members.append( "{0} _{1}[ {2} ];".
+                             format( cxxtype, cxxname, nElems ));
     else:
         emitFunction( cxxtype + "*", "get" + cxxName + "()",
                       "notifyChanging();\n    " +
@@ -404,6 +410,8 @@ def emit():
         emit.numDynamic = countDynamic( item[2:] )
         emit.currentDyn = 0
         emit.defaultValues = ''
+        emit.members = []
+        emit.initializers = []
         emit.schema = []
         emit.table = item[1]
         emit.md5 = hashlib.md5()
@@ -431,12 +439,15 @@ def emit():
             header.write( "    " + item[1] + "& operator = ( const " +
                           item[1] + "& ) { return *this; }\n\n" )
         else:
+            initializers = ""
+            if emit.initializers:
+                initializers = "    , {0}\n".format( '\n    , '.join( emit.initializers ))
+
             emitFunction( None,
-                          "{0}( ::zerobuf::Allocator *allocator = "
-                          "new ::zerobuf::NonMovingAllocator( {0}, {1} ))"
-                          .format(item[1], emit.offset, emit.currentDyn),
-                          ": ::zerobuf::Zerobuf( allocator )\n"
-                          "{{\n{0}}}\n".format(emit.defaultValues))
+                          "{0}( ::zerobuf::Allocator* allocator = new ::zerobuf::NonMovingAllocator( {1}, {2} ))".
+                          format( item[1], emit.offset, emit.numDynamic ),
+                          ": zerobuf::Zerobuf( allocator )\n" +
+                          initializers + "    {{\n{0}}}\n".format(emit.defaultValues))
             emitFunction( None,
                           item[1] + "( const " + item[1] +"& from )",
                           ": zerobuf::Zerobuf( new ::zerobuf::NonMovingAllocator( " + str(emit.offset) + ", " + str(emit.numDynamic) + " ))\n" +
@@ -465,21 +476,24 @@ def emit():
         digest = emit.md5.hexdigest()
         high = digest[ 0 : len( digest ) - 16 ]
         low  = digest[ len( digest ) - 16: ]
-        zerobufType = "servus::uint128_t( 0x{0}ull, 0x{1}ull )".format(high, low)
-        header.write( "    servus::uint128_t getZerobufType() const override\n" +
+        zerobufType = "servus::uint128_t( 0x{0}ull, 0x{1}ull )".format( high,
+                                                                        low )
+        header.write( "    servus::uint128_t getZerobufType() const override\n"+
                       "        { return " + zerobufType + "; }\n" )
         header.write( "\n" )
 
         # schema
         schema = "{{ {0}, {1},\n        {2},\n        {{\n         {3}\n         }} }}".format( emit.offset,
-                 emit.currentDyn, zerobufType, ',\n         '.join( emit.schema ))
+                emit.currentDyn, zerobufType, ',\n         '.join( emit.schema ))
         emitFunction( "::zerobuf::Schema", "schema()",
                       "return " + schema + ";", True )
         header.write( "    ::zerobuf::Schema getSchema() const override { return schema(); }\n" )
         header.write( "\n" )
 
         # closing statements
-        header.write( "};\n\n" )
+        header.write( "private:\n    {0}\n".
+                      format( '\n    '.join( emit.members )));
+        header.write( "};\n\n" );
         emit.types[ item[1] ] = ( emit.offset, item[1] )
         emit.tables.add( item[1] )
 
