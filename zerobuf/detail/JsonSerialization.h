@@ -7,9 +7,10 @@
 #include <zerobuf/NonMovingSubAllocator.h>
 #include <zerobuf/Schema.h>
 #include <zerobuf/jsoncpp/json/json.h>
-#include <type_traits>
 
 #include <iostream>
+#include <type_traits>
+#include <unordered_map>
 
 namespace zerobuf
 {
@@ -124,8 +125,7 @@ void convertToJSONValue<char>( const Allocator* allocator,
 /**
  * Converts the JSON value to a given typename T
  */
-template< typename T >
-void fromJSON( T& value, const Json::Value& jsonValue )
+template< typename T > void fromJSON( T& value, const Json::Value& jsonValue )
 {
     if( std::is_floating_point<T>( ))
         value = (T)jsonValue.asDouble();
@@ -138,8 +138,8 @@ void fromJSON( T& value, const Json::Value& jsonValue )
 }
 
 /** Specialization for servus::uint128_t, represented as an object in JSON */
-template<>
-void fromJSON<servus::uint128_t>( servus::uint128_t& value, const Json::Value& jsonValue )
+template<> void fromJSON< servus::uint128_t >( servus::uint128_t& value,
+                                               const Json::Value& jsonValue )
 {
     value = servus::uint128_t( jsonValue["high"].asUInt64(),
                                jsonValue["low"].asUInt64( ));
@@ -184,55 +184,45 @@ void convertStaticFromJSONValue( Allocator* allocator,
  * Gets the value from JSON value, performs necessary conversions and sets the
  * value(s) into the ZeroBuf allocator, as described by valueSchema.
  */
-template< class T >
-void convertFromJSONValue( Allocator* allocator,
-                           const Schema::Field& valueSchema,
-                           const Json::Value& value )
+template< class T > void convertFromJSONValue( Allocator* allocator,
+                                               const Schema::Field& valueSchema,
+                                               const Json::Value& value )
 {
-    const size_t offset =
-        std::get< Schema::FIELD_DATAOFFSET >( valueSchema );
+    const size_t offset = std::get< Schema::FIELD_DATAOFFSET >( valueSchema );
 
     if( std::get< Schema::FIELD_ISSTATIC >( valueSchema ))
-        convertStaticFromJSONValue<T>( allocator, valueSchema, value );
-    else
     {
-        T* array = reinterpret_cast< T* >(
-            allocator->updateAllocation( offset, value.size() *
-                                              sizeof( T )));
-        size_t i = 0;
-        for( const auto& jsonValue : value )
-            fromJSON< T >(  array[i++], jsonValue );
+        convertStaticFromJSONValue<T>( allocator, valueSchema, value );
+        return;
     }
+
+    T* array = reinterpret_cast< T* >(
+        allocator->updateAllocation( offset, value.size() * sizeof( T )));
+    size_t i = 0;
+    for( const auto& jsonValue : value )
+        fromJSON< T >( array[i++], jsonValue );
 }
 
 
 /* string specialization for converting from JSON value */
-template<>
-void convertFromJSONValue<char>( Allocator* allocator,
-                                 const Schema::Field& valueSchema,
-                                 const Json::Value& value )
+template<> void convertFromJSONValue< char >( Allocator* allocator,
+                                              const Schema::Field& valueSchema,
+                                              const Json::Value& value )
 {
 
     /* static variable(s) */
-    if( std::get< Schema::FIELD_ISSTATIC >( valueSchema ) )
-        convertStaticFromJSONValue<char>( allocator, valueSchema, value );
-    else
+    if( std::get< Schema::FIELD_ISSTATIC >( valueSchema ))
     {
-        const size_t offset =
-            std::get< Schema::FIELD_DATAOFFSET >( valueSchema );
-        const size_t staticSize =
-            std::get< Schema::FIELD_SIZE >( valueSchema );
-
-        NonMovingBaseAllocator* parentAllocator =
-                dynamic_cast<NonMovingBaseAllocator*>( allocator );
-
-        if( !parentAllocator )
-            throw std::runtime_error( "Only NonMovingBaseAllocator is supported" );
-
-        NonMovingSubAllocator subAlloc( parentAllocator, offset, 1, staticSize );
-        const std::string& valueStr = value.asString();
-        subAlloc.copyBuffer( valueStr.c_str(), valueStr.length( ));
+        convertStaticFromJSONValue<char>( allocator, valueSchema, value );
+        return;
     }
+
+    const size_t offset = std::get< Schema::FIELD_DATAOFFSET >( valueSchema );
+    const size_t staticSize = std::get< Schema::FIELD_SIZE >( valueSchema );
+
+    NonMovingSubAllocator subAlloc( allocator, offset, 1, staticSize );
+    const std::string& valueStr = value.asString();
+    subAlloc.copyBuffer( valueStr.c_str(), valueStr.length( ));
 }
 
 template<>
@@ -248,21 +238,16 @@ void convertStaticToJSONValue< Zerobuf >( const Allocator* allocator,
     const Schema& schema = schemaFunc();
     const size_t staticSize = schema.staticSize;
 
-    const NonMovingBaseAllocator* parentAllocator =
-               static_cast< const NonMovingBaseAllocator* >( allocator );
-
     if( size == 0 )
     {
-        ConstSubAllocator subAlloc( parentAllocator, offset,
-                                     schema.staticSize );
+        ConstSubAllocator subAlloc( allocator, offset, schema.staticSize );
         toJSONValue( &subAlloc, schema, value );
     }
     else if( std::get< Schema::FIELD_ISSTATIC >( valueSchema )) // static array
     {
         for( size_t i = 0; i < size; ++i )
         {
-            ConstSubAllocator subAlloc( parentAllocator,
-                                        offset + i * staticSize,
+            ConstSubAllocator subAlloc( allocator, offset + i * staticSize,
                                         schema.staticSize );
             Json::Value jsonVal;
             toJSONValue( &subAlloc, schema, jsonVal );
@@ -271,10 +256,9 @@ void convertStaticToJSONValue< Zerobuf >( const Allocator* allocator,
     }
 }
 
-template<>
-void convertToJSONValue< Zerobuf >( const Allocator* allocator,
-                                    const Schema::Field& valueSchema,
-                                    Json::Value& value )
+template<> void convertToJSONValue< Zerobuf >( const Allocator* allocator,
+                                               const Schema::Field& valueSchema,
+                                               Json::Value& value )
 {
     if( std::get< Schema::FIELD_ISSTATIC >( valueSchema ))
     {
@@ -287,17 +271,13 @@ void convertToJSONValue< Zerobuf >( const Allocator* allocator,
     const Schema::SchemaFunction& schemaFunc =
         std::get< Schema::FIELD_SCHEMAFUNC >( valueSchema );
     const Schema& schema = schemaFunc();
-    const NonMovingBaseAllocator* parentAllocator =
-        static_cast< const NonMovingBaseAllocator* >( allocator );
 
-    const size_t size = parentAllocator->getDynamicSize( offset ) /
-                        schema.staticSize;
-    const uint64_t dynOff = parentAllocator->getDynamicOffset( offset );
+    const size_t size = allocator->getDynamicSize( offset ) / schema.staticSize;
+    const uint64_t dynOff = allocator->getDynamicOffset( offset );
 
     for( size_t i = 0; i < size; ++i )
     {
-        ConstSubAllocator subAlloc( parentAllocator,
-                                    dynOff + i * schema.staticSize,
+        ConstSubAllocator subAlloc( allocator, dynOff + i * schema.staticSize,
                                     schema.staticSize );
         toJSONValue( &subAlloc, schema,  value[ uint32_t( i )]);
     }
@@ -315,24 +295,18 @@ void convertStaticFromJSONValue< Zerobuf >( Allocator* allocator,
     const Schema& schema = schemaFunc();
     const size_t staticSize = schema.staticSize;
 
-    NonMovingBaseAllocator* parentAllocator =
-               static_cast< NonMovingBaseAllocator* >( allocator );
-
     if( size == 0 )
     {
-        NonMovingSubAllocator nonMovingAllocator( parentAllocator,
-                                                  offset,
-                                                  0,
-                                                  schema.staticSize );
-
-        fromJSONValue( &nonMovingAllocator, schema, value );
+        NonMovingSubAllocator subAllocator( allocator, offset, 0,
+                                            schema.staticSize );
+        fromJSONValue( &subAllocator, schema, value );
     }
     /* static array */
     else if( std::get< Schema::FIELD_ISSTATIC >( valueSchema ))
     {
         if( value.size() > size )
         {
-            const std::string& key = std::get< Schema::FIELD_NAME >( valueSchema );
+            const std::string& key = std::get<Schema::FIELD_NAME>( valueSchema);
             std::cerr << "fromJSON: JSON array '" << key
                       << "' too big; got " << value.size()
                       << ", allowed is " << size << std::endl;
@@ -342,10 +316,10 @@ void convertStaticFromJSONValue< Zerobuf >( Allocator* allocator,
             size_t i = 0;
             for( const auto& jsonVal : value )
             {
-                NonMovingSubAllocator nonMovingAllocator( parentAllocator,
-                                                          offset + i * staticSize,
-                                                          0, schema.staticSize );
-                fromJSONValue( &nonMovingAllocator, schema, jsonVal );
+                NonMovingSubAllocator subAllocator( allocator,
+                                                    offset + i * staticSize,
+                                                    0, schema.staticSize );
+                fromJSONValue( &subAllocator, schema, jsonVal );
                 ++i;
             }
         }
@@ -363,32 +337,34 @@ void convertFromJSONValue< Zerobuf >( Allocator* allocator,
         convertStaticFromJSONValue<Zerobuf>( allocator, valueSchema, value );
         return;
     }
-    // else dynamic variables
-    NonMovingBaseAllocator* parentAllocator =
-        static_cast< NonMovingBaseAllocator* >( allocator );
 
+    // else dynamic variables
     const size_t offset = std::get< Schema::FIELD_DATAOFFSET >( valueSchema );
     const Schema::SchemaFunction& schemaFunc =
         std::get< Schema::FIELD_SCHEMAFUNC >( valueSchema );
     const Schema& schema = schemaFunc();
-    const size_t size = parentAllocator->getDynamicSize( offset ) /
+    const size_t size = allocator->getDynamicSize( offset ) /
                         schema.staticSize;
 
     for( size_t i = 0; i < size; ++i )
     {
-        NonMovingSubAllocator nonMovingAllocator( parentAllocator, i, size,
-                                                  schema.staticSize );
-        fromJSONValue( &nonMovingAllocator, schema, value[ uint32_t(i) ] );
+        NonMovingSubAllocator subAllocator( allocator, i, size,
+                                            schema.staticSize );
+        fromJSONValue( &subAllocator, schema, value[ uint32_t(i) ] );
     }
 }
 
-typedef std::map< std::string, std::function< void( const Allocator*,
-                                                    const Schema::Field&,
-                                                    Json::Value& ) >> ToJSONFunctionMap;
+typedef std::unordered_map< std::string,
+                            std::function< void( const Allocator*,
+                                                 const Schema::Field&,
+                                                 Json::Value& ) >>
+    ToJSONFunctionMap;
 
-typedef std::map< std::string, std::function< void( Allocator*,
-                                                    const Schema::Field&,
-                                                    const Json::Value& ) >> FromJSONFunctionMap;
+typedef std::unordered_map< std::string,
+                            std::function< void( Allocator*,
+                                                 const Schema::Field&,
+                                                 const Json::Value& ) >>
+    FromJSONFunctionMap;
 
 /**
  * Keep the function pointers for JSON conversion for types.
@@ -432,11 +408,10 @@ struct JSONConverter
         addConverterToFunctionMap< bool >( "bool" );
         addConverterToFunctionMap< char >( "char" );
         addConverterToFunctionMap< ::zerobuf::Zerobuf >( "Zerobuf" );
-
     }
 };
 
-namespace{ JSONConverter converter; }
+namespace{ JSONConverter _converter; }
 
 /** Convert a zerobuf::Schema to a JSON value. */
 void toJSONValue( const Allocator* allocator, const Schema& schema,
@@ -447,8 +422,8 @@ void toJSONValue( const Allocator* allocator, const Schema& schema,
         const std::string& type = std::get<Schema::FIELD_TYPE>( valueSchema );
         const std::string& key = std::get<Schema::FIELD_NAME>( valueSchema );
         rootJSON[ key ] = Json::Value();
-        converter.toJSONFunctionMap[ type ]( allocator, valueSchema,
-                                             rootJSON[ key ]);
+        _converter.toJSONFunctionMap[ type ]( allocator, valueSchema,
+                                              rootJSON[ key ]);
     }
 }
 
@@ -460,8 +435,8 @@ void fromJSONValue( Allocator* allocator, const Schema& schema,
     {
         const std::string& type = std::get<Schema::FIELD_TYPE>( valueSchema );
         const std::string& key = std::get<Schema::FIELD_NAME>( valueSchema );
-        converter.fromJSONFunctionMap[ type ]( allocator, valueSchema,
-                                               rootJSON[ key ]);
+        _converter.fromJSONFunctionMap[ type ]( allocator, valueSchema,
+                                                rootJSON[ key ]);
     }
 }
 
