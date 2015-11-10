@@ -30,10 +30,10 @@ public:
      * @param alloc The parent allocator that contains the data.
      * @param index Index of the vector in the parent allocator dynamic storage
      */
-    BaseVector( A* parent, size_t index, size_t elemSize = sizeof( T ));
+    BaseVector( A* parent, size_t index );
     virtual ~BaseVector() {}
 
-    template<class Q = T>
+    template< class Q = T >
     const typename std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type&
     operator[] ( const size_t index ) const
     {
@@ -43,7 +43,7 @@ public:
         return data()[ index ];
     }
 
-    template<class Q = T>
+    template< class Q = T >
     typename std::enable_if<std::is_base_of<Zerobuf,Q>::value, Q>::type
     operator[] ( const size_t index ) const
     {
@@ -54,21 +54,22 @@ public:
         // gets until the first set is done, upon which it replaces itself with
         // a copy to a NonMovingAllocator as below:
         const uint8_t* base = _parent->template getDynamic< uint8_t >( _index );
-        NonMovingAllocator* alloc = new NonMovingAllocator( _elemSize, 0 );
+        const size_t elemSize = _getElementSize< Q >();
+        NonMovingAllocator* alloc = new NonMovingAllocator( elemSize, 0 );
 
-        alloc->copyBuffer( base + index * _elemSize, _elemSize );
+        alloc->copyBuffer( base + index * elemSize, elemSize );
         return Q( alloc );
     }
 
     bool empty() const { return _getSize() == 0; }
-    uint64_t size() const { return _getSize() / _elemSize; }
+    uint64_t size() const { return _getSize() / _getElementSize< T >(); }
 
-    template<class Q = T>
+    template< class Q = T >
     const typename std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type*
     data() const
         { return _parent->template getDynamic< const T >( _index ); }
 
-    template<class Q = T>
+    template< class Q = T >
     const typename std::enable_if<std::is_base_of<Zerobuf,Q>::value, Q>::type*
     data() const
      { throw std::runtime_error( "No raw array pointer to Zerobuf elements" ); }
@@ -79,19 +80,30 @@ public:
 protected:
     A* _parent;
     const size_t _index;
-    const size_t _elemSize;
 
     BaseVector();
     size_t _getSize() const { return _parent->getDynamicSize( _index ); }
+
+    template< class Q = T > size_t _getElementSize(
+        typename std::enable_if< std::is_base_of< Zerobuf, Q >::value,
+                                                  Q >::type* = 0 ) const
+    {
+        return Q::schema().staticSize;
+    }
+
+    template< class Q = T > size_t _getElementSize(
+        typename std::enable_if< !std::is_base_of< Zerobuf, Q >::value,
+                                                   Q >::type* = 0 ) const
+    {
+        return sizeof( Q );
+    }
 };
 
 // Implementation
 template< class A, class T > inline
-BaseVector< A, T >::BaseVector( A* parent, const size_t index,
-                                const size_t elemSize )
+BaseVector< A, T >::BaseVector( A* parent, const size_t index )
     : _parent( parent )
     , _index( index )
-    , _elemSize( elemSize )
 {}
 
 

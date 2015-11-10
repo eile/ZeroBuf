@@ -116,8 +116,7 @@ def emitDynamic( spec ):
         emitFunction( "typename " + emit.table + "::Const" + cxxName,
                       "get" + cxxName + "() const",
                       "return Const" + cxxName + "( getAllocator(), " +
-                      str( emit.currentDyn ) + ", " + cxxtype +
-                      "::schema().staticSize );" )
+                      str( emit.currentDyn ) + " );" )
         # vector
         emitFunction( "std::vector< " + cxxtype + " >",
                       "get" + cxxName + "Vector() const",

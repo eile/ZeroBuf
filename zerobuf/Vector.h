@@ -25,7 +25,7 @@ public:
      * @param parent The parent allocator that contains the data.
      * @param index Index of the vector in the parent allocator dynamic storage
      */
-    Vector( Allocator* parent, size_t index, size_t staticSize = sizeof( T ));
+    Vector( Allocator* parent, size_t index );
     ~Vector() {}
 
     void push_back( const T& value );
@@ -41,9 +41,8 @@ private:
 
 // Implementation
 template< class T > inline
-Vector< T >::Vector( Allocator* parent, const size_t index,
-                     const size_t elemSize )
-    : BaseVector< Allocator, T >( parent, index, elemSize )
+Vector< T >::Vector( Allocator* parent, const size_t index )
+    : BaseVector< Allocator, T >( parent, index )
 {}
 
 template< class T > inline
@@ -56,7 +55,7 @@ void Vector< T >::push_back( const T& value )
     if( oldPtr != newPtr )
         ::memcpy( newPtr, oldPtr, size_ );
 
-    newPtr[ size_ / Super::_elemSize ] = value;
+    newPtr[ size_ / Super::template _getElementSize< T >() ] = value;
 }
 
 template< class T > inline
