@@ -11,7 +11,7 @@
 
 namespace zerobuf
 {
-NonMovingSubAllocator::NonMovingSubAllocator( NonMovingBaseAllocator* parent,
+NonMovingSubAllocator::NonMovingSubAllocator( Allocator* parent,
                                               const size_t index,
                                               const size_t numDynamic,
                                               const size_t staticSize  )
