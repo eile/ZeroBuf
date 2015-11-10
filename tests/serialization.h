@@ -3,8 +3,9 @@
  *                     Daniel Nachbaur <danielnachbaur@epfl.ch>
  */
 
-
 #include <testSchema.h>
+#include <zerobuf/ConstVector.h>
+#include <zerobuf/Vector.h>
 
 #define SETVALUES(type, name) \
     const std::vector< type > name##Vector { type(1), type(1), type(2), type(3) }; \

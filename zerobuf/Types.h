@@ -25,6 +25,9 @@ class NonMovingBaseAllocator;
 class NonMovingSubAllocator;
 struct Schema;
 class Zerobuf;
+
+template< class T > class ConstVector;
+template< class T > class Vector;
 }
 
 #endif
