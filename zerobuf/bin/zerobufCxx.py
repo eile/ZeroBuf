@@ -1,25 +1,12 @@
 #!/usr/bin/env python
 
 # TODO:
-# * configurable allocator class name
-# WIP:
-# * nested static/dynamic tables
-# * get/setJSON()
+# * nested dynamic tables
+# * endian swap method
+# * configurable allocator class name ?
 
 # UUID is MD5 hash of namespace::namespace[<cxxtype>|<cxxtype>*|<cxxtype><size>]
-#
-# Zerobuf binary format is:
-#   [dynamic storage headers][static storage][dynamic storage]
-#     dynamic storage headers: 8b offset, 8b size
-#       for all dynamic arrays in order of spec
-#       later dynamic nested classes
-#     static storage: 1,2,4,8,16b (* static array size)
-#       for all static arrays and variables in order of spec
-#       see emit.types for size
-#       later also for static nested classes
-#     dynamic storage layout is an implementation detail of the Allocator
-#
-# String arrays '[string]' are stored as an array of 'offset, size' tuples.
+# See @ref Binary for a description of the memory layout
 
 import argparse
 import hashlib
@@ -114,22 +101,26 @@ def emitDynamic( spec ):
 
     emit.md5.update( cxxtype.encode('utf-8') + b"Vector" )
 
-    header.write( "    typedef ::zerobuf::Vector< " + cxxtype + " > " + cxxName + ";\n" )
+    header.write( "    typedef ::zerobuf::Vector< " + cxxtype + " > " +
+                  cxxName + ";\n" )
     header.write( "    typedef ::zerobuf::ConstVector< " + cxxtype + " > Const" + cxxName + ";\n" )
     # non-const, const pointer
     if( cxxtype in emit.tables ):
         emitFunction( "typename " + emit.table + "::" + cxxName,
                       "get" + cxxName + "()",
                       "notifyChanging();\n    " +
-                      "return " + cxxName + "( getAllocator(), " + str( emit.currentDyn ) + " );" )
+                      "return " + cxxName + "( getAllocator(), " +
+                      str( emit.currentDyn ) + " );" )
         emitFunction( "typename " + emit.table + "::Const" + cxxName,
                       "get" + cxxName + "() const",
                       "return Const" + cxxName + "( getAllocator(), " +
-                      str( emit.currentDyn ) + ", " + cxxtype + "::schema().staticSize );" )
+                      str( emit.currentDyn ) + ", " + cxxtype +
+                      "::schema().staticSize );" )
         # vector
         emitFunction( "std::vector< " + cxxtype + " >",
                       "get" + cxxName + "Vector() const",
-                      "const Const" + cxxName + "& vec = get" + cxxName + "();\n" +
+                      "const Const" + cxxName + "& vec = get" + cxxName
+                      + "();\n" +
                       "    std::vector< " + cxxtype + " > ret;\n" +
                       "    ret.reserve( vec.size( ));\n" +
                       "    for( size_t i = 0; i < vec.size(); ++i )\n" +
@@ -146,10 +137,12 @@ def emitDynamic( spec ):
     else:
         emitFunction( "typename " + emit.table + "::" + cxxName,
                       "get" + cxxName + "()",
-                      "return " + cxxName + "( getAllocator(), " + str( emit.currentDyn ) + " );" )
+                      "return " + cxxName + "( getAllocator(), " +
+                      str( emit.currentDyn ) + " );" )
         emitFunction( "typename " + emit.table + "::Const" + cxxName,
                       "get" + cxxName + "() const",
-                      "return Const" + cxxName + "( getAllocator(), " + str( emit.currentDyn ) + " );" )
+                      "return Const" + cxxName + "( getAllocator(), " +
+                      str( emit.currentDyn ) + " );" )
         emitFunction( "void",
                       "set" + cxxName + "( " + cxxtype +
                       " const * value, size_t size )",
@@ -159,14 +152,15 @@ def emitDynamic( spec ):
         # vector
         emitFunction( "std::vector< " + cxxtype + " >",
                       "get" + cxxName + "Vector() const",
-                      "const Const" + cxxName + "& vec = get" + cxxName + "();\n    return std::vector< " + cxxtype +
+                      "const Const" + cxxName + "& vec = get" + cxxName +
+                      "();\n    return std::vector< " + cxxtype +
                       " >( vec.data(), vec.data() + vec.size( ));" )
         emitFunction( "void",
                       "set" + cxxName + "( const std::vector< " +
                       cxxtype + " >& value )",
                       "notifyChanging();\n    " +
-                      "_setZerobufArray( value.data(), value.size() * sizeof( " + cxxtype +
-                      " ), " + str( emit.currentDyn ) + " );" )
+                      "_setZerobufArray( value.data(), value.size() * sizeof( " +
+                      cxxtype + " ), " + str( emit.currentDyn ) + " );" )
         # string
         emitFunction( "std::string",
                       "get" + cxxName + "String() const",
@@ -189,8 +183,8 @@ def emitDynamic( spec ):
     if( cxxtype in emit.enums ):
         cxxBaseType = "uint32_t"
     emit.schema.append( "std::make_tuple( \"{0}\", \"{1}\", {2}, {3}, {4}, {5})".
-                        format( spec[0], cxxBaseType, emit.currentDyn, emit.offset + 8,
-                                "false", schemaPtr ))
+                        format( spec[0], cxxBaseType, emit.currentDyn,
+                                emit.offset + 8, "false", schemaPtr ))
 
     emit.offset += 16 # 8b offset, 8b size
     emit.currentDyn += 1
