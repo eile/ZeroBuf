@@ -7,8 +7,9 @@
 #define ZEROBUF_BASEVECTOR_H
 
 #include <zerobuf/Types.h>
-#include <zerobuf/NonMovingAllocator.h>
-#include <zerobuf/Zerobuf.h>
+#include <zerobuf/NonMovingAllocator.h> // used inline
+#include <zerobuf/Schema.h> // used inline
+#include <zerobuf/Zerobuf.h> // sfinae type
 
 #include <cstring> // memcmp
 #include <stdexcept> // std::runtime_error
