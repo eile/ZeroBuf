@@ -12,7 +12,7 @@
 namespace zerobuf
 {
 /**
- * Allocator base class and interface
+ * Allocator base class and interface.
  *
  * Implements part of the binary data layout by providing access to the stored
  * elements.
