@@ -10,7 +10,7 @@
 #include "Schema.h"
 #include "StaticSubAllocator.h"
 #include "Vector.h"
-#include "detail/JsonSerialization.h"
+#include "detail/JsonConverter.h"
 #include <zerobuf/version.h>
 
 #include <iostream>
@@ -21,81 +21,55 @@ namespace zerobuf
 class Zerobuf::Impl
 {
 public:
-    Impl( Zerobuf& zerobuf, Allocator* allocator )
-        : alloc( allocator )
-        , _zerobuf( zerobuf )
+    Impl( Allocator* alloc )
+        : allocator( alloc )
     {}
 
     const void* getZerobufData() const
     {
-        return alloc ? alloc->getData() : 0;
+        return allocator ? allocator->getData() : 0;
     }
 
     size_t getZerobufSize() const
     {
-        return alloc ? alloc->getSize() : 0;
+        return allocator ? allocator->getSize() : 0;
     }
 
     void setZerobufData( const void* data, size_t size )
     {
-        if( !alloc )
+        if( !allocator )
             throw std::runtime_error(
                 "Can't copy data into empty Zerobuf object" );
-        alloc->copyBuffer( data, size );
-    }
-
-    std::string toJSONString() const
-    {
-        if( !alloc )
-            throw std::runtime_error(
-                "Can't convert empty Zerobuf object to JSON" );
-
-        Json::Value rootJSON;
-        detail::toJSONValue( alloc, _zerobuf.getSchema(), rootJSON );
-        return rootJSON.toStyledString();
-    }
-
-    void fromJSON( const std::string& json )
-    {
-        if( !alloc )
-            throw std::runtime_error(
-                "Can't convert empty Zerobuf object from JSON" );
-
-        Json::Value rootJSON;
-        Json::Reader reader;
-        reader.parse( json, rootJSON );
-        detail::fromJSONValue( alloc, _zerobuf.getSchema(), rootJSON );
+        allocator->copyBuffer( data, size );
     }
 
     Impl& operator = ( const Impl& rhs )
     {
-        if( !alloc )
+        if( !allocator )
             throw std::runtime_error(
                 "Can't copy data into empty Zerobuf object" );
 
-        const Allocator* from = rhs.alloc;
+        const Allocator* from = rhs.allocator;
         if( !from )
             throw std::runtime_error(
                 "Can't copy data from empty Zerobuf object" );
 
-        alloc->copyBuffer( from->getData(), from->getSize( ));
+        allocator->copyBuffer( from->getData(), from->getSize( ));
         return *this;
     }
 
     void setZerobufArray( const void* data, const size_t size,
                           const size_t arrayNum )
     {
-        if( !alloc )
+        if( !allocator )
             throw std::runtime_error(
                 "Can't copy data into empty Zerobuf object" );
 
-        void* array = alloc->updateAllocation( arrayNum, size );
+        void* array = allocator->updateAllocation( arrayNum, size );
         ::memcpy( array, data, size );
     }
 
-    Allocator* alloc;
-    Zerobuf& _zerobuf;
-
+    Allocator* allocator;
 };
 
 template<>
@@ -117,10 +91,10 @@ Zerobuf::Zerobuf()
     : _impl( new Zerobuf::Impl( *this, 0 ))
 {}
 
-Zerobuf::Zerobuf( Allocator* alloc )
-    : _impl( new Zerobuf::Impl( *this, alloc ))
+Zerobuf::Zerobuf( Allocator* allocator )
+    : _impl( new Zerobuf::Impl( *this, allocator ))
 {
-    uint32_t& version = alloc->getItem< uint32_t >( 0 );
+    uint32_t& version = allocator->getItem< uint32_t >( 0 );
     version = ZEROBUF_VERSION_ABI;
 }
 
@@ -170,13 +144,31 @@ void Zerobuf::setZerobufData( const void* data, size_t size )
 
 std::string Zerobuf::toJSON() const
 {
-    return _impl->toJSONString();
+    if( !_impl->allocator )
+        throw std::runtime_error( "Can't convert empty Zerobuf object to JSON");
+
+    Json::Value rootJSON;
+    JSONConverter converter( getSchemas( ));
+
+    if( !converter.fromJSON( allocator, rootJSON ))
+        return std::string();
+    return rootJSON.toStyledString();
 }
 
-void Zerobuf::fromJSON( const std::string& json )
+bool Zerobuf::fromJSON( const std::string& json )
 {
+    if( !allocator )
+        throw std::runtime_error(
+            "Can't convert empty Zerobuf object from JSON" );
+
     notifyChanging();
-    _impl->fromJSON( json );
+
+    Json::Value rootJSON;
+    Json::Reader reader;
+    reader.parse( json, rootJSON );
+
+    JSONConverter converter( getSchemas( ));
+    return converter.fromJSON( allocator, rootJSON );
 }
 
 bool Zerobuf::operator == ( const Zerobuf& rhs ) const
@@ -194,12 +186,12 @@ bool Zerobuf::operator != ( const Zerobuf& rhs ) const
 Allocator* Zerobuf::getAllocator()
 {
     notifyChanging();
-    return _impl->alloc;
+    return _impl->allocator;
 }
 
 const Allocator* Zerobuf::getAllocator() const
 {
-    return _impl->alloc;
+    return _impl->allocator;
 }
 
 void Zerobuf::_setZerobufArray( const void* data, const size_t size,

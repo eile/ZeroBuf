@@ -15,7 +15,7 @@ GenericBase< Alloc >::GenericBase( const Schema& schema )
 {}
 
 template< class Alloc >
-servus::uint128_t GenericBase< Alloc >::getZerobufType() const
+const servus::uint128_t& GenericBase< Alloc >::getZerobufType() const
 {
     return _schema.type;
 }

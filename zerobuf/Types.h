@@ -22,12 +22,19 @@ class Allocator;
 class Zerobuf;
 class NonMovingAllocator;
 class NonMovingBaseAllocator;
-class NonMovingSubAllocator;
 struct Schema;
 class Zerobuf;
 
 template< class T > class ConstVector;
 template< class T > class Vector;
+
+template< class A > class NonMovingSubAllocatorBase;
+typedef NonMovingSubAllocatorBase< Allocator > NonMovingSubAllocator;
+typedef NonMovingSubAllocatorBase< const Allocator > ConstNonMovingSubAllocator;
+
+typedef std::vector< Schema > Schemas;
+
+using servus::uint128_t;
 }
 
 #endif

@@ -13,7 +13,7 @@ set(ZEROBUF_PUBLIC_HEADERS
   )
 
 set(ZEROBUF_HEADERS
-  detail/JsonSerialization.h
+  detail/JsonConverter.h
   NonMovingAllocator.h
   NonMovingBaseAllocator.h
   NonMovingSubAllocator.h

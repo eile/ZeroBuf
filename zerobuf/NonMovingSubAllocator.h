@@ -13,16 +13,18 @@
 namespace zerobuf
 {
 /** A zerobuf child allocator which does not move existing fields */
-class NonMovingSubAllocator : public NonMovingBaseAllocator
+template< class A > class NonMovingSubAllocatorBase :
+            public NonMovingBaseAllocator
 {
 public:
-    ZEROBUF_API NonMovingSubAllocator( Allocator* parent, size_t index,
-                                       size_t numDynamic, size_t staticSize );
-    ZEROBUF_API NonMovingSubAllocator( const NonMovingSubAllocator& from );
-    ZEROBUF_API ~NonMovingSubAllocator();
+    ZEROBUF_API NonMovingSubAllocatorBase( A* parent, size_t index,
+                                           size_t numDynamic,
+                                           size_t staticSize );
+    ZEROBUF_API NonMovingSubAllocatorBase( const NonMovingSubAllocatorBase<A>&);
+    ZEROBUF_API ~NonMovingSubAllocatorBase();
 
-    ZEROBUF_API
-    NonMovingSubAllocator& operator = ( const NonMovingSubAllocator& );
+    ZEROBUF_API NonMovingSubAllocatorBase< A >& operator = (
+        const NonMovingSubAllocatorBase< A >& );
     ZEROBUF_API const Allocator* getParent() const { return _parent; }
 
     ZEROBUF_API uint8_t* getData() final;
@@ -30,13 +32,12 @@ public:
     ZEROBUF_API size_t getSize() const final;
     ZEROBUF_API void copyBuffer( const void* data, size_t size ) final;
 
-    ZEROBUF_API virtual Allocator* clone() const final;
-
 private:
-    Allocator* _parent;
+    A* _parent;
     size_t _index;
 
     void _resize( size_t newSize ) final;
 };
+
 }
 #endif

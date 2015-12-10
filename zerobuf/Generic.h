@@ -28,7 +28,7 @@ class GenericBase : public Zerobuf
 public:
     ZEROBUF_API explicit GenericBase( const Schema& schema );
 
-    ZEROBUF_API servus::uint128_t getZerobufType() const final;
+    ZEROBUF_API const servus::uint128_t& getZerobufType() const final;
     ZEROBUF_API Schema getSchema() const final;
 
 private:

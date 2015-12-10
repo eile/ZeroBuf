@@ -36,7 +36,7 @@ public:
      *
      * @return the pointer to the elem at the new place.
      */
-    virtual uint8_t* updateAllocation( size_t index,  size_t newSize ) = 0;
+    virtual uint8_t* updateAllocation( size_t index, size_t newSize ) = 0;
 
     template< class T > T* getItemPtr( const size_t offset )
         { return reinterpret_cast< T* >( getData() + offset ); }
@@ -61,8 +61,6 @@ public:
 
     size_t getDynamicSize( const size_t index ) const
         { return _getSize( index ); }
-
-    virtual Allocator* clone() const = 0;
 
 protected:
     uint64_t& _getOffset( const size_t i )

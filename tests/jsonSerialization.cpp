@@ -11,6 +11,10 @@
 
 #include "serialization.h"
 
+const std::string expectedNestedJson( "{\n"
+                                      "   \"intvalue\" : 42,\n"
+                                      "   \"uintvalue\" : 43\n"
+                                      "}\n" );
 const std::string expectedJson( "{\n"
                                 "   \"boolvalue\" : true,\n"
                                 "   \"bytearray\" : [ 1, 1, 2, 3 ],\n"
@@ -144,13 +148,22 @@ const std::string expectedJson( "{\n"
 BOOST_AUTO_TEST_CASE(zerobufToJSON)
 {
     const test::TestSchema& object( getTestObject( ));
-
     const std::string& json = object.toJSON();
     BOOST_CHECK_EQUAL( json, expectedJson );
+
+    const test::TestNested& constNested = object.getNested();
+    BOOST_CHECK_EQUAL( constNested.toJSON(), expectedNestedJson );
+
+    test::TestNested nested = object.getNested();
+    BOOST_CHECK_EQUAL( nested.toJSON(), expectedNestedJson );
 }
 
 BOOST_AUTO_TEST_CASE(zerobufFromJSON)
 {
+    test::TestNested nested;
+    nested.fromJSON( expectedNestedJson );
+    checkTestObject( nested );
+
     test::TestSchema object;
     object.fromJSON( expectedJson );
     checkTestObject( object );

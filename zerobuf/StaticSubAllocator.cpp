@@ -56,8 +56,7 @@ template<> uint8_t* StaticSubAllocatorBase< const Allocator >::getData()
     return nullptr;
 }
 
-template< class A >
-const uint8_t* StaticSubAllocatorBase< A >::getData() const
+template< class A > const uint8_t* StaticSubAllocatorBase< A >::getData() const
 {
     return _parent->template getItemPtr< uint8_t >( _offset );
 }

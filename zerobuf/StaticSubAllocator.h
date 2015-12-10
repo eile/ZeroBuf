@@ -39,7 +39,7 @@ private:
 };
 
 typedef StaticSubAllocatorBase< Allocator > StaticSubAllocator;
-typedef StaticSubAllocatorBase< const Allocator > ConstSubAllocator;
+typedef StaticSubAllocatorBase< const Allocator > ConstStaticSubAllocator;
 
 }
 

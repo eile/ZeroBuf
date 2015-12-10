@@ -103,11 +103,12 @@ def emitDynamic( spec ):
 
     emit.md5.update( cxxtype.encode('utf-8') + b"Vector" )
 
-    header.write( "    typedef ::zerobuf::Vector< " + cxxtype + " > " +
-                  cxxName + ";\n" )
-    header.write( "    typedef ::zerobuf::ConstVector< " + cxxtype + " > Const" + cxxName + ";\n" )
+    header.write( "    typedef ::zerobuf::Vector< {0} > {1};\n".
+                  format( cxxtype, cxxName ))
+    header.write( "    typedef ::zerobuf::ConstVector< {0} > Const{1};\n".
+                  format( cxxtype, cxxName ))
     # non-const, const pointer
-    if( cxxtype in emit.tables ):
+    if cxxtype in emit.tables:
         emitFunction( "typename " + emit.table + "::" + cxxName,
                       "get" + cxxName + "()",
                       "notifyChanging();\n    " +
@@ -176,16 +177,23 @@ def emitDynamic( spec ):
                       "_setZerobufArray( value.c_str(), value.length(), " +
                       str( emit.currentDyn ) + " );" )
     # schema entry
-    cxxBaseType = cxxtype
-    schemaPtr = "::zerobuf::Schema::SchemaFunction( )"
-    if( cxxtype in emit.tables ):
-        cxxBaseType = "Zerobuf"
-        schemaPtr = "::zerobuf::Schema::SchemaFunction( &" + cxxtype + "::schema )"
-    if( cxxtype in emit.enums ):
-        cxxBaseType = "uint32_t"
-    emit.schema.append( "std::make_tuple( \"{0}\", \"{1}\", {2}, {3}, {4}, {5})".
-                        format( spec[0], cxxBaseType, emit.currentDyn,
-                                emit.offset + 8, "false", schemaPtr ))
+    if cxxtype in emit.enums:
+        cxxtype = "uint32_t"
+    elemSize = emit.types[ cxxtype ][ 0 ]
+
+    if cxxtype in emit.tables:
+        emit.nested.add( cxxtype )
+        zerobufType = "{0}::ZEROBUF_TYPE".format( cxxtype )
+        elemSize = "( {0}::isStaticZerobuf() ? {1} : 0 )".
+                     format( cxxtype, emit.types[ cxxtype ][ 0 ] )
+    else:
+        digest = hashlib.md5( "{0}".format( cxxtype )).hexdigest()
+        high = digest[ 0 : len( digest ) - 16 ]
+        low  = digest[ len( digest ) - 16: ]
+        zerobufType = "servus::uint128_t( 0x{0}ull, 0x{1}ull )".format( high,
+                                                                        low )
+    emit.schema.append( "std::make_tuple( \"{0}\", {1}, {2}, {3}, 0 )".
+                        format( spec[0], zerobufType, emit.offset, elemSize ))
 
     emit.offset += 16 # 8b offset, 8b size
     emit.currentDyn += 1
@@ -200,7 +208,7 @@ def emitStaticMember( spec ):
 
     emit.md5.update( cxxtype.encode('utf-8') )
 
-    if( cxxtype in emit.tables ):
+    if cxxtype in emit.tables:
         emitFunction( "const {0}&".format( cxxtype ),
                       "get" + cxxName + "() const",
                       "return _{0};".format( cxxname ))
@@ -224,16 +232,20 @@ def emitStaticMember( spec ):
                       str( emit.offset ) + " ) = value;" )
 
     # schema entry
-    cxxBaseType = cxxtype
-    schemaPtr = "::zerobuf::Schema::SchemaFunction( )"
-    if( cxxtype in emit.tables ):
-        cxxBaseType = "Zerobuf"
-        schemaPtr = "::zerobuf::Schema::SchemaFunction( &" + cxxtype + "::schema )"
-    if( cxxtype in emit.enums ):
-        cxxBaseType = "uint32_t"
-    emit.schema.append("std::make_tuple( \"{0}\", \"{1}\", {2}, {3}, {4}, {5})".
-                       format( spec[0], cxxBaseType, emit.offset, 0, "true",
-                               schemaPtr ))
+    if cxxtype in emit.enums:
+        cxxtype = "uint32_t"
+    if cxxtype in emit.tables:
+        emit.nested.add( cxxtype )
+        zerobufType = "{0}::ZEROBUF_TYPE".format( cxxtype )
+    else:
+        digest = hashlib.md5( "{0}".format( cxxtype )).hexdigest()
+        high = digest[ 0 : len( digest ) - 16 ]
+        low  = digest[ len( digest ) - 16: ]
+        zerobufType = "servus::uint128_t( 0x{0}ull, 0x{1}ull )".format( high,
+                                                                        low )
+    emit.schema.append( "std::make_tuple( \"{0}\", {1}, {2}, {3}, 1 )".
+                        format( spec[0], zerobufType, emit.offset, elemSize ))
+
     emit.offset += elemSize
 
 def emitStaticArray( spec ):
@@ -245,8 +257,13 @@ def emitStaticArray( spec ):
     nBytes = elemSize * nElems
 
     emit.md5.update( (cxxtype + str( nElems )).encode('utf-8') )
+    if nElems < 2:
+        sys.exit( "Static array of size {0} not supported".format( nElems ))
+    if elemSize == 0:
+        sys.exit( "Static array of dynamic elements not implemented".
+                  format( nElems ))
 
-    if( cxxtype in emit.tables ):
+    if cxxtype in emit.tables:
         header.write( "    typedef std::array< {0}, {1} > {2};\n".
                       format( cxxtype, nElems, cxxName ))
         emitFunction( "const {0}::{1}&".format( emit.table, cxxName ),
@@ -303,16 +320,20 @@ def emitStaticArray( spec ):
                       cxxtype + ">( " + str( emit.offset ) +
                       " ), value.data(), value.length( ));" )
     # schema entry
-    cxxBaseType = cxxtype
-    schemaPtr = "::zerobuf::Schema::SchemaFunction( )"
-    if( cxxtype in emit.tables ):
-        cxxBaseType = "Zerobuf"
-        schemaPtr = "::zerobuf::Schema::SchemaFunction( &" + cxxtype + "::schema )"
-    if( cxxtype in emit.enums ):
-        cxxBaseType = "uint32_t"
-    emit.schema.append( "std::make_tuple( \"{0}\", \"{1}\", {2}, {3}, {4}, {5})".
-                        format( spec[0], cxxBaseType, emit.offset, nElems,
-                                "true", schemaPtr ))
+    if cxxtype in emit.enums:
+        cxxtype = "uint32_t"
+    if cxxtype in emit.tables:
+        emit.nested.add( cxxtype )
+        zerobufType = "{0}::ZEROBUF_TYPE".format( cxxtype )
+    else:
+        digest = hashlib.md5( "{0}".format( cxxtype )).hexdigest()
+        high = digest[ 0 : len( digest ) - 16 ]
+        low  = digest[ len( digest ) - 16: ]
+        zerobufType = "servus::uint128_t( 0x{0}ull, 0x{1}ull )".format( high,
+                                                                        low )
+    emit.schema.append( "std::make_tuple( \"{0}\", {1}, {2}, {3}, {4} )".
+                        format( spec[0], zerobufType, emit.offset, elemSize,
+                                nElems ))
     emit.offset += nBytes
 
 def emitStatic( spec ):
@@ -335,6 +356,7 @@ def emit():
     emit.enums = set()
     emit.tables = set()
     emit.schema = []
+    emit.nested = set()
     emit.types = { "int" : ( 4, "int32_t" ),
                    "uint" : ( 4, "uint32_t" ),
                    "float" : ( 4, "float" ),
@@ -381,6 +403,7 @@ def emit():
         emit.members = []
         emit.initializers = []
         emit.schema = []
+        emit.nested = set()
         emit.table = item[1]
         emit.md5 = hashlib.md5()
         for namespace in emit.namespace:
@@ -446,22 +469,27 @@ def emit():
         low  = digest[ len( digest ) - 16: ]
         zerobufType = "servus::uint128_t( 0x{0}ull, 0x{1}ull )".format( high,
                                                                         low )
-        header.write( "    servus::uint128_t getZerobufType() const final\n"+
-                      "        { return " + zerobufType + "; }\n" )
+        header.write( "    const uint128_t& getZerobufType() const final\n"+
+                      "        { return ZEROBUF_TYPE; }\n" )
         header.write( "\n" )
 
         # schema
-        schema = "{{ {0}, {1},\n        {2},\n        {{\n         {3}\n         }} }}".format( emit.offset,
-                emit.currentDyn, zerobufType, ',\n         '.join( emit.schema ))
+        schema = "{{ {0}, {1},\n        {2},\n        {{\n         {3}\n         }} }}".format( emit.offset, emit.currentDyn, zerobufType, ',\n         '.join( emit.schema ))
+        schemas = "return ::zerobuf::Schemas{{{{ schema(){1} }}}}".format(
+            ', '.join( emit.nested ))
         emitFunction( "::zerobuf::Schema", "schema()",
                       "return " + schema + ";", True )
         emitFunction( "::zerobuf::Schema", "getSchema() const final",
                       "{ return schema(); }\n" );
+        emitFunction( "::zerobuf::Schemas", "getSchemas() const final",
+                      "{{ return {0}; }}\n".format( schemas ));
         header.write( "\n" )
 
         # closing statements
         header.write( "private:\n    {0}\n".
                       format( '\n    '.join( emit.members )));
+        header.write( "    static const uint128_t ZEROBUF_TYPE( {0} );".
+                      format( zerobufType ))
         header.write( "};\n\n" );
         emit.types[ item[1] ] = ( emit.offset, item[1] )
         emit.tables.add( item[1] )
