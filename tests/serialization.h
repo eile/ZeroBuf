@@ -15,18 +15,29 @@
     object.set##name##array( name##Vector ); \
     object.set##name##value( name##value );
 
-#define TESTVALUES(type, name) \
-    const std::vector< type > expected##name##Vector { type(1), type(1), type(2), type(3) }; \
-    const type expected##name##value( 42 ); \
-    \
-    const std::vector< type >& name##Dynamic( object.get##name##dynamicVector( )); \
-    const std::vector< type >& name##Array( object.get##name##arrayVector( )); \
-    const type& name##Value( object.get##name##value( )); \
-    \
-    BOOST_CHECK_EQUAL_COLLECTIONS( expected##name##Vector.begin(), expected##name##Vector.end(),\
-                                   name##Dynamic.begin(), name##Dynamic.end( )); \
-    BOOST_CHECK_EQUAL_COLLECTIONS( expected##name##Vector.begin(), expected##name##Vector.end(),\
-                                   name##Array.begin(), name##Array.end( )); \
+#define TESTVALUES( type, name )                                        \
+    const std::vector< type > expected##name##Vector { type(1),         \
+            type(1), type(2), type(3) };                                \
+    const type expected##name##value( 42 );                             \
+                                                                        \
+    const std::vector< type >& name##Dynamic(                           \
+        object.get##name##dynamicVector( ));                            \
+    const std::vector< type >& name##Array(                             \
+        object.get##name##arrayVector( ));                              \
+    const type& name##Value( object.get##name##value( ));               \
+                                                                        \
+    BOOST_CHECK_EQUAL( expected##name##Vector.size(),                   \
+                       name##Dynamic.size( ));                          \
+    BOOST_CHECK_EQUAL( expected##name##Vector.size(),                   \
+                       name##Array.size( ));                            \
+    BOOST_CHECK_EQUAL_COLLECTIONS( expected##name##Vector.begin(),      \
+                                   expected##name##Vector.end(),        \
+                                   name##Dynamic.begin(),               \
+                                   name##Dynamic.end( ));               \
+    BOOST_CHECK_EQUAL_COLLECTIONS( expected##name##Vector.begin(),      \
+                                   expected##name##Vector.end(),        \
+                                   name##Array.begin(),                 \
+                                   name##Array.end( ));                 \
     BOOST_CHECK_EQUAL( expected##name##value, name##Value );
 
 
@@ -167,6 +178,12 @@ test::TestSchema getTestObject()
     return object;
 }
 
+void checkTestObject( const test::TestNested& nested )
+{
+    BOOST_CHECK_EQUAL( nested.getIntvalue(), 42  );
+    BOOST_CHECK_EQUAL( nested.getUintvalue(), 43  );
+}
+
 void checkTestObject( const test::TestSchema& object )
 {
     TESTVALUES(int32_t, Int);
@@ -190,9 +207,7 @@ void checkTestObject( const test::TestSchema& object )
     BOOST_CHECK( object.getBoolvalue( ));
     BOOST_CHECK_EQUAL( object.getStringvalueString(), "testmessage" );
 
-    const test::TestNested& nested = object.getNested( );
-    BOOST_CHECK_EQUAL( nested.getIntvalue(), 42  );
-    BOOST_CHECK_EQUAL( nested.getUintvalue(), 43  );
+    checkTestObject( object.getNested( ));
 
     // Test retrieved tables
     const auto& tables = object.getNestedarray();

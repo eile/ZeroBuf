@@ -25,8 +25,6 @@ public:
     size_t getSize() const  final { return _size; }
     ZEROBUF_API void copyBuffer( const void* data, size_t size ) final;
 
-    ZEROBUF_API virtual Allocator* clone() const final;
-
 private:
     A& _parent;
     size_t _offset;
@@ -38,7 +36,7 @@ private:
 };
 
 typedef StaticSubAllocatorBase< Allocator > StaticSubAllocator;
-typedef StaticSubAllocatorBase< const Allocator > ConstSubAllocator;
+typedef StaticSubAllocatorBase< const Allocator > ConstStaticSubAllocator;
 
 }
 

@@ -9,30 +9,36 @@
 namespace zerobuf
 {
 
-Generic::Generic( const Schema& schema )
-    : Zerobuf( AllocatorPtr( new NonMovingAllocator( schema.staticSize,
-                                                     schema.numDynamics )))
-    , _schema( schema )
+Generic::Generic( const Schemas& schemas )
+    : Zerobuf( AllocatorPtr(
+                   new NonMovingAllocator( schemas.front().staticSize,
+                                           schemas.front().numDynamics )))
+    , _schemas( schemas )
 {}
 
-servus::uint128_t Generic::getZerobufType() const
+uint128_t Generic::getZerobufType() const
 {
-    return _schema.type;
+    return getSchema().type;
 }
 
 size_t Generic::getZerobufStaticSize() const
 {
-    return _schema.staticSize;
+    return getSchema().staticSize;
 }
 
 size_t Generic::getZerobufNumDynamics() const
 {
-    return _schema.numDynamics;
+    return getSchema().numDynamics;
 }
 
 Schema Generic::getSchema() const
 {
-    return _schema;
+    return _schemas.front();
+}
+
+Schemas Generic::getSchemas() const
+{
+    return _schemas;
 }
 
 }

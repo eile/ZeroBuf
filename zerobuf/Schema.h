@@ -36,28 +36,23 @@ struct Schema
      * The type identifier of the object.
      * @sa ZeroBuf::getZerobufType()
      */
-    const servus::uint128_t type;
+    const uint128_t type;
 
     /** Access enums for the field tuple in the object.*/
     enum FieldEnum
     {
-        FIELD_NAME,       //!< the name of the field
-        FIELD_TYPE,       //!< the C++ type of the field
-        FIELD_DATAOFFSET, //!< the data offset in the allocator
-        FIELD_SIZE,       /**< size of static arrays, size offset in the
-                               allocator for dynamic arrays */
-        FIELD_ISSTATIC,    //!< bool if the field is static or not
-        FIELD_SCHEMAFUNC    //!< schema function pointer
+        FIELD_NAME,       //!< name of the field
+        FIELD_TYPE,       //!< type identifier of the field
+        FIELD_OFFSET,     //!< offset in bytes in the zerobuf
+        FIELD_SIZE,       //!< size of the field (0 for dynamic elements)
+        FIELD_ELEMENTS    //!< number of elements (0 for dynamic arrays)
     };
-
-    typedef std::function< Schema() > SchemaFunction;
 
     /**
      * Contains the information to describe one Zerobuf member.
      * @sa FieldEnum
      */
-    typedef std::tuple< std::string, std::string, size_t, size_t, bool,
-                        SchemaFunction > Field;
+    typedef std::tuple< std::string, uint128_t, size_t, size_t, size_t > Field;
 
     /** All the fields in object */
     const std::vector< Field > fields;

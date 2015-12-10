@@ -11,6 +11,10 @@
 
 #include "serialization.h"
 
+const std::string expectedNestedJson( "{\n"
+                                      "   \"intvalue\" : 42,\n"
+                                      "   \"uintvalue\" : 43\n"
+                                      "}\n" );
 const std::string expectedJson( "{\n"
                                 "   \"boolvalue\" : true,\n"
                                 "   \"bytearray\" : [ 1, 1, 2, 3 ],\n"
@@ -151,13 +155,22 @@ const std::string expectedJson( "{\n"
 BOOST_AUTO_TEST_CASE(zerobufToJSON)
 {
     const test::TestSchema& object( getTestObject( ));
-
     const std::string& json = object.toJSON();
     BOOST_CHECK_EQUAL( json, expectedJson );
+
+    const test::TestNested& constNested = object.getNested();
+    BOOST_CHECK_EQUAL( constNested.toJSON(), expectedNestedJson );
+
+    test::TestNested nested = object.getNested();
+    BOOST_CHECK_EQUAL( nested.toJSON(), expectedNestedJson );
 }
 
 BOOST_AUTO_TEST_CASE(zerobufFromJSON)
 {
+    test::TestNested nested;
+    nested.fromJSON( expectedNestedJson );
+    checkTestObject( nested );
+
     test::TestSchema object;
     object.fromJSON( expectedJson );
     checkTestObject( object );
@@ -168,9 +181,9 @@ BOOST_AUTO_TEST_CASE(rawZerobufToJSON)
     const test::TestSchema& object( getTestObject( ));
     const void* data = object.getZerobufData();
     const size_t size = object.getZerobufSize();
-    const zerobuf::Schema& schema = test::TestSchema::schema();
+    const zerobuf::Schemas& schemas = test::TestSchema::schemas();
 
-    zerobuf::Generic generic( schema );
+    zerobuf::Generic generic( schemas );
     generic.copyZerobufData( data, size );
     const std::string& json = generic.toJSON();
     BOOST_CHECK_EQUAL( json, expectedJson );
@@ -178,8 +191,8 @@ BOOST_AUTO_TEST_CASE(rawZerobufToJSON)
 
 BOOST_AUTO_TEST_CASE(rawZerobufFromJSON)
 {
-    zerobuf::Schema schema = test::TestSchema::schema();
-    zerobuf::Generic generic( schema );
+    zerobuf::Schemas schemas = test::TestSchema::schemas();
+    zerobuf::Generic generic( schemas );
     generic.fromJSON( expectedJson );
 
     const test::TestSchema object( generic );

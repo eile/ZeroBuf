@@ -7,6 +7,7 @@
 #define ZEROBUF_TYPES_H
 
 #include <servus/types.h>
+#include <memory>
 
 /**
  * ZeroBuf is a replacement for FlatBuffers/protobuf.
@@ -22,7 +23,6 @@ class Allocator;
 class Zerobuf;
 class NonMovingAllocator;
 class NonMovingBaseAllocator;
-class NonMovingSubAllocator;
 struct Schema;
 class Zerobuf;
 
@@ -30,6 +30,19 @@ typedef std::unique_ptr< Allocator > AllocatorPtr;
 
 template< class T > class ConstVector;
 template< class T > class Vector;
+
+template< class A > class NonMovingSubAllocatorBase;
+typedef NonMovingSubAllocatorBase< Allocator > NonMovingSubAllocator;
+typedef NonMovingSubAllocatorBase< const Allocator > ConstNonMovingSubAllocator;
+
+typedef std::vector< Schema > Schemas;
+
+using servus::uint128_t;
+}
+
+namespace Json
+{
+class Value;
 }
 
 #endif

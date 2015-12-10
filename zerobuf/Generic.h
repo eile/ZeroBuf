@@ -24,15 +24,16 @@ namespace zerobuf
 class Generic : public Zerobuf
 {
 public:
-    ZEROBUF_API explicit Generic( const Schema& schema );
+    ZEROBUF_API explicit Generic( const Schemas& schemas );
 
-    ZEROBUF_API servus::uint128_t getZerobufType() const final;
+    ZEROBUF_API uint128_t getZerobufType() const final;
     ZEROBUF_API size_t getZerobufStaticSize() const final;
     ZEROBUF_API size_t getZerobufNumDynamics() const final;
     ZEROBUF_API Schema getSchema() const final;
+    ZEROBUF_API Schemas getSchemas() const final;
 
 private:
-    const Schema _schema;
+    const Schemas _schemas;
 };
 
 }

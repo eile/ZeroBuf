@@ -12,12 +12,6 @@
 #include <servus/uint128_t.h>
 #include <memory> // std::unique_ptr
 
-
-namespace Json
-{
-class Value;
-}
-
 namespace zerobuf
 {
 
@@ -35,10 +29,11 @@ public:
     ZEROBUF_API Zerobuf& operator = ( const Zerobuf& rhs );
     ZEROBUF_API Zerobuf& operator = ( Zerobuf&& rhs );
 
-    virtual servus::uint128_t getZerobufType() const = 0;
+    virtual uint128_t getZerobufType() const = 0;
     virtual size_t getZerobufStaticSize() const = 0;
     virtual size_t getZerobufNumDynamics() const = 0;
     virtual Schema getSchema() const = 0;
+    virtual Schemas getSchemas() const = 0;
 
     /** Called if any data in this object is about to change. */
     virtual void notifyChanging() {}
@@ -55,8 +50,18 @@ public:
     /** Copy the raw data into the zerobuf. */
     ZEROBUF_API void copyZerobufData( const void* data, size_t size );
 
+    /** Convert the given instance to a JSON representation. */
     ZEROBUF_API std::string toJSON() const;
-    ZEROBUF_API void fromJSON( const std::string& json );
+
+    /**
+     * Convert the given JSON string into this object.
+     *
+     * When a parse error occurs, the object may be partially updated by the
+     * already parsed data.
+     *
+     * @return true on success, false on error.
+     */
+    ZEROBUF_API bool fromJSON( const std::string& json );
 
     ZEROBUF_API bool operator == ( const Zerobuf& rhs ) const;
     ZEROBUF_API bool operator != ( const Zerobuf& rhs ) const;
