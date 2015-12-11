@@ -29,7 +29,7 @@ public:
 
     const void* getZerobufData() const
     {
-        return alloc ? alloc->getData() : 0;
+        return alloc ? alloc->getData() : nullptr;
     }
 
     size_t getZerobufSize() const
@@ -37,7 +37,7 @@ public:
         return alloc ? alloc->getSize() : 0;
     }
 
-    void setZerobufData( const void* data, size_t size )
+    void copyZerobufData( const void* data, size_t size )
     {
         if( !alloc )
             throw std::runtime_error(
@@ -77,7 +77,7 @@ public:
         return *this;
     }
 
-    void setZerobufArray( const void* data, const size_t size,
+    void copyZerobufArray( const void* data, const size_t size,
                           const size_t arrayNum )
     {
         if( !alloc )
@@ -91,10 +91,6 @@ public:
     AllocatorPtr alloc;
     Zerobuf& _zerobuf;
 };
-
-Zerobuf::Zerobuf()
-    : _impl( new Zerobuf::Impl( *this, 0 ))
-{}
 
 Zerobuf::Zerobuf( AllocatorPtr alloc )
     : _impl( new Zerobuf::Impl( *this, std::move( alloc )))
@@ -152,10 +148,10 @@ size_t Zerobuf::getZerobufSize() const
     return _impl->getZerobufSize();
 }
 
-void Zerobuf::setZerobufData( const void* data, size_t size )
+void Zerobuf::copyZerobufData( const void* data, size_t size )
 {
     notifyChanging();
-    _impl->setZerobufData( data, size );
+    _impl->copyZerobufData( data, size );
 }
 
 std::string Zerobuf::toJSON() const
@@ -171,8 +167,11 @@ void Zerobuf::fromJSON( const std::string& json )
 
 bool Zerobuf::operator == ( const Zerobuf& rhs ) const
 {
-    if( this == &rhs )
+    if( this == &rhs ||
+        ( !_impl->alloc && getZerobufType() == rhs.getZerobufType( )))
+    {
         return true;
+    }
     return toJSON() == rhs.toJSON();
 }
 
@@ -183,20 +182,26 @@ bool Zerobuf::operator != ( const Zerobuf& rhs ) const
 
 Allocator& Zerobuf::getAllocator()
 {
+    if( !_impl->alloc )
+        throw std::runtime_error( "Empty Zerobuf has no allocator" );
+
     notifyChanging();
     return *_impl->alloc;
 }
 
 const Allocator& Zerobuf::getAllocator() const
 {
+    if( !_impl->alloc )
+        throw std::runtime_error( "Empty Zerobuf has no allocator" );
+
     return *_impl->alloc;
 }
 
-void Zerobuf::_setZerobufArray( const void* data, const size_t size,
-                                const size_t arrayNum )
+void Zerobuf::_copyZerobufArray( const void* data, const size_t size,
+                                 const size_t arrayNum )
 {
     notifyChanging();
-    _impl->setZerobufArray( data, size, arrayNum );
+    _impl->copyZerobufArray( data, size, arrayNum );
 }
 
 }

@@ -150,7 +150,7 @@ def emitDynamic( spec ):
                       "set" + cxxName + "( " + cxxtype +
                       " const * value, size_t size )",
                       "notifyChanging();\n    " +
-                      "_setZerobufArray( value, size * sizeof( " + cxxtype +
+                      "_copyZerobufArray( value, size * sizeof( " + cxxtype +
                       " ), " + str( emit.currentDyn ) + " );" )
         # vector
         emitFunction( "std::vector< " + cxxtype + " >",
@@ -162,7 +162,7 @@ def emitDynamic( spec ):
                       "set" + cxxName + "( const std::vector< " +
                       cxxtype + " >& value )",
                       "notifyChanging();\n    " +
-                      "_setZerobufArray( value.data(), value.size() * sizeof( " +
+                      "_copyZerobufArray( value.data(), value.size() * sizeof( " +
                       cxxtype + " ), " + str( emit.currentDyn ) + " );" )
         # string
         emitFunction( "std::string",
@@ -175,7 +175,7 @@ def emitDynamic( spec ):
         emitFunction( "void",
                       "set" + cxxName + "( const std::string& value )",
                       "notifyChanging();\n    " +
-                      "_setZerobufArray( value.c_str(), value.length(), " +
+                      "_copyZerobufArray( value.c_str(), value.length(), " +
                       str( emit.currentDyn ) + " );" )
     # schema entry
     cxxBaseType = cxxtype
@@ -405,9 +405,9 @@ def emit():
         # ctors, dtor and assignment operator
         if emit.offset == 4: # OPT: table has no data
             emit.offset = 0
-            header.write( "    " + item[1] + "() : Zerobuf() {}\n" )
+            header.write( "    " + item[1] + "() : ::zerobuf::Zerobuf( ::zerobuf::AllocatorPtr( )) {}\n" )
             header.write( "    " + item[1] + "( const " + item[1] +
-                          "& ) : Zerobuf() {}\n" )
+                          "& ) : ::zerobuf::Zerobuf( ::zerobuf::AllocatorPtr( )) {}\n" )
             header.write( "    virtual ~" + item[1] + "() {}\n\n" )
             header.write( "    " + item[1] + "& operator = ( const " +
                           item[1] + "& ) { return *this; }\n\n" )

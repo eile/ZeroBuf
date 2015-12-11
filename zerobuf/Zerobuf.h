@@ -46,32 +46,38 @@ public:
     /** Called by ZeroEQ subscriber upon receive() of this object. */
     virtual void notifyReceived() {}
 
+    /** @return the pointer to the zerobuf. */
     ZEROBUF_API const void* getZerobufData() const;
+
+    /** @return the size of the zerobuf. */
     ZEROBUF_API size_t getZerobufSize() const;
-    ZEROBUF_API void setZerobufData( const void* data, size_t size );
+
+    /** Copy the raw data into the zerobuf. */
+    ZEROBUF_API void copyZerobufData( const void* data, size_t size );
 
     ZEROBUF_API std::string toJSON() const;
     ZEROBUF_API void fromJSON( const std::string& json );
 
-    ZEROBUF_API bool operator==( const Zerobuf& rhs ) const;
-    ZEROBUF_API bool operator!=( const Zerobuf& rhs ) const;
+    ZEROBUF_API bool operator == ( const Zerobuf& rhs ) const;
+    ZEROBUF_API bool operator != ( const Zerobuf& rhs ) const;
 
     /* @internal */
     const Allocator& getAllocator() const;
 
 protected:
-    Zerobuf();
     explicit Zerobuf( AllocatorPtr alloc ); // takes ownership of alloc
     Zerobuf( const Zerobuf& zerobuf ) = delete;
     ZEROBUF_API virtual ~Zerobuf();
 
     Allocator& getAllocator();
 
-    ZEROBUF_API void _setZerobufArray( const void* data, size_t size,
-                                       size_t arrayNum );
+    ZEROBUF_API void _copyZerobufArray( const void* data, size_t size,
+                                        size_t arrayNum );
 private:
     class Impl;
     std::unique_ptr<Impl> _impl;
+
+    Zerobuf() = delete;
 };
 
 }

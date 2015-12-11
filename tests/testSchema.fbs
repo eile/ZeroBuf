@@ -11,6 +11,9 @@ table TestNested {
   uintvalue: uint;
 }
 
+table TestEmpty {
+}
+
 table TestSchema {
   intvalue: int;
   uintvalue: uint = 42;
