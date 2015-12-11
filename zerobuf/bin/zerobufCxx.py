@@ -259,9 +259,10 @@ def emitStaticArray( spec ):
         emitFunction( "{0}::{1}&".format( emit.table, cxxName ),
                       "get" + cxxName + "()",
                       "return _{0};".format( cxxname ))
-        emitFunction( "void",
-                      "notifyChanging();\n    " +
-                      "_{0} = value;".format( cxxname ))
+#        emitFunction( "void",
+#                      "set{0}( const {1}& value )".format( cxxName, cxxtype ),
+#                      "notifyChanging();\n    " +
+#                      "_{0} = value;".format( cxxname ))
         emit.members.append( "{0} _{1};".format( cxxName, cxxname ));
         initializer = "_{0}{1}".format( cxxname, "{{" );
         for i in range( 0, nElems ):

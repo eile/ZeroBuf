@@ -139,6 +139,7 @@ test::TestSchema getTestObject()
     intMagic = 42;
     uintMagic = 43;
 
+#if 0
     // Writable nested tables
     std::array< test::TestNested, 4 > nesteds;
     for( test::TestNested& inner : nesteds )
@@ -150,6 +151,7 @@ test::TestSchema getTestObject()
 
     intMagic = 42;
     uintMagic = 43;
+#endif
 
     // Setting dynamic tables
     std::vector< test::TestNested > nestedDyn;
