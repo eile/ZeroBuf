@@ -36,6 +36,8 @@ public:
     ZEROBUF_API Zerobuf& operator = ( Zerobuf&& rhs );
 
     virtual servus::uint128_t getZerobufType() const = 0;
+    virtual size_t getZerobufStaticSize() const = 0;
+    virtual size_t getZerobufNumDynamics() const = 0;
     virtual Schema getSchema() const = 0;
 
     /** Called if any data in this object is about to change. */
@@ -55,15 +57,15 @@ public:
     ZEROBUF_API bool operator!=( const Zerobuf& rhs ) const;
 
     /* @internal */
-    const Allocator* getAllocator() const;
+    const Allocator& getAllocator() const;
 
 protected:
     Zerobuf();
-    explicit Zerobuf( Allocator* alloc ); // takes ownership of alloc
+    explicit Zerobuf( AllocatorPtr alloc ); // takes ownership of alloc
     Zerobuf( const Zerobuf& zerobuf ) = delete;
     ZEROBUF_API virtual ~Zerobuf();
 
-    Allocator* getAllocator();
+    Allocator& getAllocator();
 
     ZEROBUF_API void _setZerobufArray( const void* data, size_t size,
                                        size_t arrayNum );

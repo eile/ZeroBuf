@@ -15,13 +15,10 @@ namespace zerobuf
 template< class A > class StaticSubAllocatorBase : public Allocator
 {
 public:
-    ZEROBUF_API StaticSubAllocatorBase( A* parent, size_t offset,
+    ZEROBUF_API StaticSubAllocatorBase( A& parent, size_t offset,
                                         size_t size );
     ZEROBUF_API StaticSubAllocatorBase( const StaticSubAllocatorBase< A >& );
     ZEROBUF_API ~StaticSubAllocatorBase();
-
-    ZEROBUF_API
-    StaticSubAllocatorBase<A>& operator = ( const StaticSubAllocatorBase<A>& );
 
     ZEROBUF_API uint8_t* getData() final;
     ZEROBUF_API const uint8_t* getData() const final;
@@ -31,11 +28,13 @@ public:
     ZEROBUF_API virtual Allocator* clone() const final;
 
 private:
-    A* _parent;
+    A& _parent;
     size_t _offset;
     size_t _size;
 
     uint8_t* updateAllocation( size_t index, size_t newSize ) final;
+    StaticSubAllocatorBase<A>& operator = ( const StaticSubAllocatorBase<A>& ) =
+        delete;
 };
 
 typedef StaticSubAllocatorBase< Allocator > StaticSubAllocator;

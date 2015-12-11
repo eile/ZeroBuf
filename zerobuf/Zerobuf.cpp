@@ -5,11 +5,9 @@
 
 #include "Zerobuf.h"
 
-#include "ConstVector.h"
 #include "NonMovingSubAllocator.h"
 #include "Schema.h"
 #include "StaticSubAllocator.h"
-#include "Vector.h"
 #include "detail/JsonSerialization.h"
 #include <zerobuf/version.h>
 
@@ -21,9 +19,12 @@ namespace zerobuf
 class Zerobuf::Impl
 {
 public:
-    Impl( Zerobuf& zerobuf, Allocator* allocator )
-        : alloc( allocator )
+    Impl( Zerobuf& zerobuf, AllocatorPtr allocator )
+        : alloc( std::move( allocator ))
         , _zerobuf( zerobuf )
+    {}
+
+    ~Impl()
     {}
 
     const void* getZerobufData() const
@@ -51,7 +52,7 @@ public:
                 "Can't convert empty Zerobuf object to JSON" );
 
         Json::Value rootJSON;
-        detail::toJSONValue( alloc, _zerobuf.getSchema(), rootJSON );
+        detail::toJSONValue( alloc.get(), _zerobuf.getSchema(), rootJSON );
         return rootJSON.toStyledString();
     }
 
@@ -64,21 +65,15 @@ public:
         Json::Value rootJSON;
         Json::Reader reader;
         reader.parse( json, rootJSON );
-        detail::fromJSONValue( alloc, _zerobuf.getSchema(), rootJSON );
+        detail::fromJSONValue( alloc.get(), _zerobuf.getSchema(), rootJSON );
     }
 
     Impl& operator = ( const Impl& rhs )
     {
-        if( !alloc )
-            throw std::runtime_error(
-                "Can't copy data into empty Zerobuf object" );
+        if( !alloc || !rhs.alloc )
+            return *this;
 
-        const Allocator* from = rhs.alloc;
-        if( !from )
-            throw std::runtime_error(
-                "Can't copy data from empty Zerobuf object" );
-
-        alloc->copyBuffer( from->getData(), from->getSize( ));
+        alloc->copyBuffer( rhs.alloc->getData(), rhs.alloc->getSize( ));
         return *this;
     }
 
@@ -93,41 +88,27 @@ public:
         ::memcpy( array, data, size );
     }
 
-    Allocator* alloc;
+    AllocatorPtr alloc;
     Zerobuf& _zerobuf;
-
 };
-
-template<>
-void Vector< Zerobuf >::push_back( const Zerobuf& value )
-{
-    const size_t size_ =  Super::_getSize();
-    const uint8_t* oldPtr = reinterpret_cast<const uint8_t*>( data( ));
-    uint8_t* newPtr = Vector::_parent->updateAllocation( Super::_index,
-                                                         size_ + value.getZerobufSize( ));
-    if( oldPtr != newPtr )
-        ::memcpy( newPtr, oldPtr, size_ );
-
-    ::memcpy( newPtr + size_,
-              value.getZerobufData(),
-              value.getZerobufSize());
-}
 
 Zerobuf::Zerobuf()
     : _impl( new Zerobuf::Impl( *this, 0 ))
 {}
 
-Zerobuf::Zerobuf( Allocator* alloc )
-    : _impl( new Zerobuf::Impl( *this, alloc ))
+Zerobuf::Zerobuf( AllocatorPtr alloc )
+    : _impl( new Zerobuf::Impl( *this, std::move( alloc )))
 {
-    uint32_t& version = alloc->getItem< uint32_t >( 0 );
-    version = ZEROBUF_VERSION_ABI;
+    if( alloc )
+    {
+        uint32_t& version = alloc->getItem< uint32_t >( 0 );
+        version = ZEROBUF_VERSION_ABI;
+    }
 }
 
-Zerobuf::Zerobuf( Zerobuf&& from )
-    : _impl( std::move( from._impl ))
+Zerobuf::Zerobuf( Zerobuf&& rhs )
 {
-    from._impl.reset( new Zerobuf::Impl( from, 0 ));
+    *this = rhs;
 }
 
 Zerobuf::~Zerobuf()
@@ -135,8 +116,13 @@ Zerobuf::~Zerobuf()
 
 Zerobuf& Zerobuf::operator = ( const Zerobuf& rhs )
 {
-    if( this != &rhs )
-        *_impl = *rhs._impl;
+    if( this == &rhs )
+        return *this;
+    if( getZerobufType() != rhs.getZerobufType( ))
+        throw std::runtime_error( "Can't assign Zerobuf of a different type" );
+
+    notifyChanging();
+    *_impl = *rhs._impl;
     return *this;
 }
 
@@ -147,8 +133,12 @@ Zerobuf& Zerobuf::operator = ( Zerobuf&& rhs )
     if( getZerobufType() != rhs.getZerobufType( ))
         throw std::runtime_error( "Can't assign Zerobuf of a different type" );
 
-    *_impl = std::move( *rhs._impl );
-    rhs._impl.reset( new Zerobuf::Impl( rhs, 0 ));
+    notifyChanging();
+    rhs.notifyChanging();
+    _impl = std::move( rhs._impl );
+    rhs._impl.reset( new Zerobuf::Impl( rhs,
+        AllocatorPtr( new NonMovingAllocator( getZerobufStaticSize(),
+                                              getZerobufNumDynamics( )))));
     return *this;
 }
 
@@ -191,15 +181,15 @@ bool Zerobuf::operator != ( const Zerobuf& rhs ) const
     return !(*this == rhs);
 }
 
-Allocator* Zerobuf::getAllocator()
+Allocator& Zerobuf::getAllocator()
 {
     notifyChanging();
-    return _impl->alloc;
+    return *_impl->alloc;
 }
 
-const Allocator* Zerobuf::getAllocator() const
+const Allocator& Zerobuf::getAllocator() const
 {
-    return _impl->alloc;
+    return *_impl->alloc;
 }
 
 void Zerobuf::_setZerobufArray( const void* data, const size_t size,

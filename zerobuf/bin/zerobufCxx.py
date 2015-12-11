@@ -167,10 +167,10 @@ def emitDynamic( spec ):
         # string
         emitFunction( "std::string",
                       "get" + cxxName + "String() const",
-                      "const uint8_t* ptr = getAllocator()->template getDynamic< " +
+                      "const uint8_t* ptr = getAllocator().template getDynamic< " +
                       "const uint8_t >( " + str( emit.currentDyn ) + " );\n" +
                       "    return std::string( ptr, ptr + " +
-                      "getAllocator()->template getItem< uint64_t >( " +
+                      "getAllocator().template getItem< uint64_t >( " +
                       str( emit.offset + 8 ) + " ));" )
         emitFunction( "void",
                       "set" + cxxName + "( const std::string& value )",
@@ -215,16 +215,16 @@ def emitStaticMember( spec ):
                       "_{0} = value;".format( cxxname ))
         emit.members.append( "{0} _{1};".format( cxxtype, cxxname ));
         emit.initializers.append(
-            "_{0}( new ::zerobuf::StaticSubAllocator( getAllocator(), {1}, {2} ))".
+            "_{0}( ::zerobuf::AllocatorPtr( new ::zerobuf::StaticSubAllocator( getAllocator(), {1}, {2} )))".
             format( cxxname, emit.offset, elemSize ))
     else:
         emitFunction( cxxtype, "get" + cxxName + "() const",
-                      "return getAllocator()->template getItem< " + cxxtype +
+                      "return getAllocator().template getItem< " + cxxtype +
                       " >( " + str( emit.offset ) + " );" )
         emitFunction( "void",
                       "set"  + cxxName + "( " + cxxtype + " value )",
                       "notifyChanging();\n    " +
-                      "getAllocator()->template getItem< " + cxxtype + " >( " +
+                      "getAllocator().template getItem< " + cxxtype + " >( " +
                       str( emit.offset ) + " ) = value;" )
 
     # schema entry
@@ -266,21 +266,21 @@ def emitStaticArray( spec ):
         emit.members.append( "{0} _{1};".format( cxxName, cxxname ));
         initializer = "_{0}{1}".format( cxxname, "{{" );
         for i in range( 0, nElems ):
-            initializer += "\n        {0}( new ::zerobuf::StaticSubAllocator( getAllocator(), {1}, {2} )){3} ".format( cxxtype, emit.offset + i * elemSize, elemSize, "}}" if i == nElems - 1 else "," )
+            initializer += "\n        {0}( ::zerobuf::AllocatorPtr( new ::zerobuf::StaticSubAllocator( getAllocator(), {1}, {2} ))){3} ".format( cxxtype, emit.offset + i * elemSize, elemSize, "}}" if i == nElems - 1 else "," )
         emit.initializers.append( initializer );
 
     else:
         emitFunction( cxxtype + "*", "get" + cxxName + "()",
                       "notifyChanging();\n    " +
-                      "return getAllocator()->template getItemPtr< " + cxxtype +
+                      "return getAllocator().template getItemPtr< " + cxxtype +
                       " >( " + str( emit.offset ) + " );" )
         emitFunction( "const " + cxxtype + "*",
                       "get" + cxxName + "() const",
-                      "return getAllocator()->template getItemPtr< " + cxxtype +
+                      "return getAllocator().template getItemPtr< " + cxxtype +
                       " >( " + str( emit.offset ) + " );" )
         emitFunction( "std::vector< " + cxxtype + " >",
                       "get" + cxxName + "Vector() const",
-                      "const " + cxxtype + "* ptr = getAllocator()->template " +
+                      "const " + cxxtype + "* ptr = getAllocator().template " +
                       "getItemPtr< " + cxxtype + " >( " + str( emit.offset ) +
                       " );\n    return std::vector< " + cxxtype +
                       " >( ptr, ptr + " + str( nElems ) + " );" )
@@ -288,7 +288,7 @@ def emitStaticArray( spec ):
                       "set"  + cxxName + "( " + cxxtype + " value[ " +
                       spec[4] + " ] )",
                       "notifyChanging();\n    " +
-                      "::memcpy( getAllocator()->template getItemPtr< " +
+                      "::memcpy( getAllocator().template getItemPtr< " +
                       cxxtype + " >( " + str( emit.offset ) + " ), value, " +
                       spec[4] + " * sizeof( " + cxxtype + " ));" )
         emitFunction( "void",
@@ -296,7 +296,7 @@ def emitStaticArray( spec ):
                       cxxtype + " >& value )",
                       "notifyChanging();\n    " +
                       "if( " + str( nElems ) + " >= value.size( ))\n" +
-                      "        ::memcpy( getAllocator()->template getItemPtr<" +
+                      "        ::memcpy( getAllocator().template getItemPtr<" +
                       cxxtype + ">( " + str( emit.offset ) +
                       " ), value.data(), value.size() * sizeof( " + cxxtype +
                       "));" )
@@ -304,7 +304,7 @@ def emitStaticArray( spec ):
                       "set" + cxxName + "( const std::string& value )",
                       "notifyChanging();\n    " +
                       "if( " + str( nBytes ) + " >= value.length( ))\n" +
-                      "        ::memcpy( getAllocator()->template getItemPtr<" +
+                      "        ::memcpy( getAllocator().template getItemPtr<" +
                       cxxtype + ">( " + str( emit.offset ) +
                       " ), value.data(), value.length( ));" )
     # schema entry
@@ -417,33 +417,37 @@ def emit():
                 initializers = "    , {0}\n".format( '\n    , '.join( emit.initializers ))
 
             emitFunction( None,
-                          "{0}( ::zerobuf::Allocator* allocator = new ::zerobuf::NonMovingAllocator( {1}, {2} ))".
-                          format( item[1], emit.offset, emit.numDynamic ),
-                          ": zerobuf::Zerobuf( allocator )\n" +
-                          initializers + "    {{\n{0}}}\n".format(emit.defaultValues))
+                          "{0}()".format( item[1] ),
+                          ": {0}( ::zerobuf::AllocatorPtr( new ::zerobuf::NonMovingAllocator( {1}, {2} )))\n"
+                          "{{\n{3}}}\n".format( item[1], emit.offset, emit.numDynamic,emit.defaultValues ))
             emitFunction( None,
                           item[1] + "( const " + item[1] +"& from )",
-                          ": zerobuf::Zerobuf( new ::zerobuf::NonMovingAllocator( " + str(emit.offset) + ", " + str(emit.numDynamic) + " ))\n" + initializers +
+                          ": {0}( ::zerobuf::AllocatorPtr( new ::zerobuf::NonMovingAllocator( {1}, {2} )))\n".format( item[1], emit.offset, emit.numDynamic ) +
                           "{\n" +
                           "    *this = from;\n" +
                           "}\n",
                           explicit = False )
             emitFunction( None,
                           item[1] + "( const ::zerobuf::Zerobuf& from )",
-                          ": ::zerobuf::Zerobuf( new ::zerobuf::NonMovingAllocator( " + str(emit.offset) + ", " + str(emit.numDynamic) + " ))\n" +
+                          ": {0}( ::zerobuf::AllocatorPtr( new ::zerobuf::NonMovingAllocator( {1}, {2} )))\n".format( item[1], emit.offset, emit.numDynamic ) +
                           "{\n" +
                           "    *this = from;\n" +
                           "}\n",
                           explicit = False )
+
+            # Zerobuf object owns allocator!
+            emitFunction( None, "{0}( ::zerobuf::AllocatorPtr allocator )".format( item[1] ),
+                          ": ::zerobuf::Zerobuf( std::move( allocator ))\n{0}    {{}}\n".format( initializers ))
+
             header.write( "    virtual ~" + item[1] + "() {}\n\n" )
             header.write( "    " + item[1] + "& operator = ( const " + item[1] + "& rhs )\n"+
                           "        { ::zerobuf::Zerobuf::operator = ( rhs ); return *this; }\n\n" )
 
         # introspection
-        header.write( "    static bool isEmptyZerobuf() { return " +
-                   str( emit.offset == 0 ).lower() + "; }\n" )
-        header.write( "    static bool isStaticZerobuf() { return " +
-                   str( emit.numDynamic == 0 ).lower() + "; }\n" )
+        header.write( "    size_t getZerobufStaticSize() const final\n"+
+                      "        {{ return {0}; }}\n".format( emit.offset ))
+        header.write( "    size_t getZerobufNumDynamics() const final\n"+
+                      "        {{ return {0}; }}\n".format( emit.numDynamic ))
 
         # zerobufType
         digest = emit.md5.hexdigest()
@@ -466,7 +470,7 @@ def emit():
 
         # closing statements
         header.write( "private:\n    {0}\n".
-                      format( '\n    '.join( emit.members )));
+                      format( '\n    '.join( emit.members )))
         header.write( "};\n\n" );
         emit.types[ item[1] ] = ( emit.offset, item[1] )
         emit.tables.add( item[1] )

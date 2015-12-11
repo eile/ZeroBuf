@@ -26,7 +26,7 @@ public:
      * @param alloc The parent allocator that contains the data.
      * @param index Index of the vector in the parent allocator dynamic storage
      */
-    ConstVector( const Allocator* parent, size_t index );
+    ConstVector( const Allocator& alloc, size_t index );
     ~ConstVector() {}
 
 private:
@@ -39,8 +39,8 @@ private:
 
 // Implementation
 template< class T > inline
-ConstVector< T >::ConstVector( const Allocator* parent, const size_t index )
-    : BaseVector< const Allocator, T >( parent, index )
+ConstVector< T >::ConstVector( const Allocator& alloc, const size_t index )
+    : BaseVector< const Allocator, T >( alloc, index )
 {}
 
 }

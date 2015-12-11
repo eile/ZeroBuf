@@ -26,6 +26,8 @@ class NonMovingSubAllocator;
 struct Schema;
 class Zerobuf;
 
+typedef std::unique_ptr< Allocator > AllocatorPtr;
+
 template< class T > class ConstVector;
 template< class T > class Vector;
 }

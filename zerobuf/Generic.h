@@ -9,7 +9,6 @@
 #include <zerobuf/api.h>
 #include <zerobuf/Zerobuf.h> // base class
 #include <zerobuf/Schema.h> // member
-#include <zerobuf/NonMovingAllocator.h>
 
 namespace zerobuf
 {
@@ -22,20 +21,19 @@ namespace zerobuf
  * set and accessed via JSON w/o having the schema file nor the generated class
  * file available. Hence it does not provide any semantic methods.
  */
-template< class Alloc = NonMovingAllocator >
-class GenericBase : public Zerobuf
+class Generic : public Zerobuf
 {
 public:
-    ZEROBUF_API explicit GenericBase( const Schema& schema );
+    ZEROBUF_API explicit Generic( const Schema& schema );
 
     ZEROBUF_API servus::uint128_t getZerobufType() const final;
+    ZEROBUF_API size_t getZerobufStaticSize() const final;
+    ZEROBUF_API size_t getZerobufNumDynamics() const final;
     ZEROBUF_API Schema getSchema() const final;
 
 private:
     const Schema _schema;
 };
-
-typedef GenericBase< NonMovingAllocator > Generic;
 
 }
 

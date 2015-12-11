@@ -30,7 +30,7 @@ struct Schema
      * The number of dynamic fields in the object.
      * @sa NonMovingBaseAllocator
      */
-    const size_t numDynamic;
+    const size_t numDynamics;
 
     /**
      * The type identifier of the object.

@@ -4,28 +4,35 @@
  */
 
 #include "Generic.h"
+#include <zerobuf/NonMovingAllocator.h>
 
 namespace zerobuf
 {
 
-template< class Alloc >
-GenericBase< Alloc >::GenericBase( const Schema& schema )
-    : Zerobuf( new Alloc( schema.staticSize, schema.numDynamic ))
+Generic::Generic( const Schema& schema )
+    : Zerobuf( AllocatorPtr( new NonMovingAllocator( schema.staticSize,
+                                                     schema.numDynamics )))
     , _schema( schema )
 {}
 
-template< class Alloc >
-servus::uint128_t GenericBase< Alloc >::getZerobufType() const
+servus::uint128_t Generic::getZerobufType() const
 {
     return _schema.type;
 }
 
-template< class Alloc >
-Schema GenericBase< Alloc >::getSchema() const
+size_t Generic::getZerobufStaticSize() const
+{
+    return _schema.staticSize;
+}
+
+size_t Generic::getZerobufNumDynamics() const
+{
+    return _schema.numDynamics;
+}
+
+Schema Generic::getSchema() const
 {
     return _schema;
 }
-
-template class GenericBase< NonMovingAllocator >;
 
 }

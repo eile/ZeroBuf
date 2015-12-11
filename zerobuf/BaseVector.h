@@ -31,7 +31,7 @@ public:
      * @param alloc The parent allocator that contains the data.
      * @param index Index of the vector in the parent allocator dynamic storage
      */
-    BaseVector( A* parent, size_t index );
+    BaseVector( A& alloc, size_t index );
     virtual ~BaseVector() {}
 
     template< class Q = T >
@@ -54,12 +54,12 @@ public:
         // TODO OPT: Create a COW allocator, which uses the existing memory for
         // gets until the first set is done, upon which it replaces itself with
         // a copy to a NonMovingAllocator as below:
-        const uint8_t* base = _parent->template getDynamic< uint8_t >( _index );
+        const uint8_t* base = _alloc.template getDynamic< uint8_t >( _index );
         const size_t elemSize = _getElementSize< Q >();
-        NonMovingAllocator* alloc = new NonMovingAllocator( elemSize, 0 );
+        AllocatorPtr alloc( new NonMovingAllocator( elemSize, 0 ));
 
         alloc->copyBuffer( base + index * elemSize, elemSize );
-        return Q( alloc );
+        return Q( std::move( alloc ));
     }
 
     bool empty() const { return _getSize() == 0; }
@@ -67,8 +67,7 @@ public:
 
     template< class Q = T >
     const typename std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type*
-    data() const
-        { return _parent->template getDynamic< const T >( _index ); }
+    data() const { return _alloc.template getDynamic< const T >( _index ); }
 
     template< class Q = T >
     const typename std::enable_if<std::is_base_of<Zerobuf,Q>::value, Q>::type*
@@ -79,11 +78,11 @@ public:
     bool operator != ( const BaseVector& rhs ) const;
 
 protected:
-    A* _parent;
+    A& _alloc;
     const size_t _index;
 
     BaseVector();
-    size_t _getSize() const { return _parent->getDynamicSize( _index ); }
+    size_t _getSize() const { return _alloc.getDynamicSize( _index ); }
 
     template< class Q = T > size_t _getElementSize(
         typename std::enable_if< std::is_base_of< Zerobuf, Q >::value,
@@ -102,8 +101,8 @@ protected:
 
 // Implementation
 template< class A, class T > inline
-BaseVector< A, T >::BaseVector( A* parent, const size_t index )
-    : _parent( parent )
+BaseVector< A, T >::BaseVector( A& alloc, const size_t index )
+    : _alloc( alloc )
     , _index( index )
 {}
 

@@ -22,27 +22,27 @@ class Vector : public BaseVector< Allocator, T >
 
 public:
     /**
-     * @param parent The parent allocator that contains the data.
+     * @param alloc The parent allocator that contains the data.
      * @param index Index of the vector in the parent allocator dynamic storage
      */
-    Vector( Allocator* parent, size_t index );
+    Vector( Allocator& alloc, size_t index );
     ~Vector() {}
 
     void push_back( const T& value );
     T* data()
-        { return Super::_parent->template getDynamic< T >( Super::_index ); }
+        { return Super::_alloc.template getDynamic< T >( Super::_index ); }
 
 private:
     Vector();
     void _resize( const size_t size )
-        { Super::_parent->updateAllocation( Super::_index, size ); }
+        { Super::_alloc.updateAllocation( Super::_index, size ); }
     void copyBuffer( uint8_t* data, size_t size );
 };
 
 // Implementation
 template< class T > inline
-Vector< T >::Vector( Allocator* parent, const size_t index )
-    : BaseVector< Allocator, T >( parent, index )
+Vector< T >::Vector( Allocator& alloc, const size_t index )
+    : BaseVector< Allocator, T >( alloc, index )
 {}
 
 template< class T > inline
@@ -51,7 +51,7 @@ void Vector< T >::push_back( const T& value )
     const size_t size_ = Super::_getSize();
     const T* oldPtr = data();
     T* newPtr = reinterpret_cast< T* >(
-        Super::_parent->updateAllocation( Super::_index, size_ + sizeof( T )));
+        Super::_alloc.updateAllocation( Super::_index, size_ + sizeof( T )));
     if( oldPtr != newPtr )
         ::memcpy( newPtr, oldPtr, size_ );
 
@@ -61,12 +61,22 @@ void Vector< T >::push_back( const T& value )
 template< class T > inline
 void Vector< T >::copyBuffer( uint8_t* data_, size_t size )
 {
-    void* to = Super::_parent->updateAllocation( Super::_index, size );
+    void* to = Super::_alloc.updateAllocation( Super::_index, size );
     ::memcpy( to, data_, size );
 }
 
-template<>
-void Vector<Zerobuf>::push_back( const Zerobuf& value );
+template<> inline
+void Vector<Zerobuf>::push_back( const Zerobuf& value )
+{
+    const size_t size_ =  Super::_getSize();
+    const uint8_t* oldPtr = reinterpret_cast<const uint8_t*>( data( ));
+    uint8_t* newPtr = _alloc.updateAllocation( Super::_index,
+                                               size_ + value.getZerobufSize( ));
+    if( oldPtr != newPtr )
+        ::memcpy( newPtr, oldPtr, size_ );
+
+    ::memcpy( newPtr + size_, value.getZerobufData(), value.getZerobufSize( ));
+}
 
 }
 

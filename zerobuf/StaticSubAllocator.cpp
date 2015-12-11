@@ -12,7 +12,7 @@
 namespace zerobuf
 {
 template< class A >
-StaticSubAllocatorBase< A >::StaticSubAllocatorBase( A* parent,
+StaticSubAllocatorBase< A >::StaticSubAllocatorBase( A& parent,
                                                      const size_t offset,
                                                      const size_t size )
     : _parent( parent )
@@ -32,34 +32,21 @@ template< class A >
 StaticSubAllocatorBase< A >::~StaticSubAllocatorBase()
 {}
 
-template< class A >
-StaticSubAllocatorBase< A >& StaticSubAllocatorBase< A >::operator = (
-    const StaticSubAllocatorBase< A >& rhs )
-{
-    if( this == &rhs )
-        return *this;
-
-    _parent = rhs._parent;
-    _offset = rhs._offset;
-    _size = rhs._size;
-    return *this;
-}
 
 template< class A > uint8_t* StaticSubAllocatorBase< A >::getData()
 {
-    return _parent->template getItemPtr< uint8_t >( _offset );
+    return _parent.template getItemPtr< uint8_t >( _offset );
 }
 
 template<> uint8_t* StaticSubAllocatorBase< const Allocator >::getData()
 {
     throw std::runtime_error( "Non-const data access on const data" );
-    return nullptr;
 }
 
 template< class A >
 const uint8_t* StaticSubAllocatorBase< A >::getData() const
 {
-    return _parent->template getItemPtr< uint8_t >( _offset );
+    return _parent.template getItemPtr< uint8_t >( _offset );
 }
 
 template< class A >
@@ -77,7 +64,6 @@ uint8_t* StaticSubAllocatorBase< A >::updateAllocation( size_t, size_t )
 {
     throw std::runtime_error(
         "Static-sized Zerobuf does not have dynamic allocations" );
-    return nullptr;
 }
 
 template< class A >
