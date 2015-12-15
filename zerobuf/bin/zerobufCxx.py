@@ -112,12 +112,12 @@ def emitDynamic( spec ):
         emitFunction( "typename " + emit.table + "::" + cxxName,
                       "get" + cxxName + "()",
                       "notifyChanging();\n    " +
-                      "return " + cxxName + "( getAllocator(), " +
-                      str( emit.currentDyn ) + " );" )
+                      "return {0}( getAllocator(), getAllocator().getDynamicOffset({1}) );"
+                      .format(cxxName, emit.currentDyn) )
         emitFunction( "typename " + emit.table + "::Const" + cxxName,
                       "get" + cxxName + "() const",
-                      "return Const" + cxxName + "( getAllocator(), " +
-                      str( emit.currentDyn ) + " );" )
+                      "return Const{0}( getAllocator(), getAllocator().getDynamicOffset({1}) );"
+                      .format(cxxName, emit.currentDyn) )
         # vector
         emitFunction( "std::vector< " + cxxtype + " >",
                       "get" + cxxName + "Vector() const",
