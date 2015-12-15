@@ -440,14 +440,43 @@ def emit():
             header.write( "    " + item[1] + "& operator = ( const " +
                           item[1] + "& ) { return *this; }\n\n" )
         else:
-            initializers = ""
-            if emit.initializers:
-                initializers = "    , {0}\n".format( '\n    , '.join( emit.initializers ))
-
+            # default ctor
             emitFunction( None,
                           "{0}()".format( item[1] ),
                           ": {0}( ::zerobuf::AllocatorPtr( new ::zerobuf::NonMovingAllocator( {1}, {2} )))\n"
-                          "{{\n{3}}}\n".format( item[1], emit.offset, emit.numDynamic,emit.defaultValues ))
+                          "{{\n{3}}}\n".format( item[1], emit.offset, emit.numDynamic, emit.defaultValues ))
+
+            # member initialization ctor
+            memberArgs = []
+            initializers = ''
+            for member in item[2:]:
+                cxxname = member[0]
+                cxxName = cxxname[0].upper() + cxxname[1:]
+                if isDynamic( member ):
+                    isString = (member[1] == "string")
+                    if isString:
+                        cxxtype = "std::string"
+                    else:
+                        cxxtype = "std::vector< {0} >".format(emit.types[member[2]][1])
+                else:
+                    if len(member) == 2 or len(member) == 3:
+                        cxxtype = emit.types[member[1]][1] # static member
+                    else:
+                        if cxxtype in emit.tables:
+                            cxxtype = cxxName # static array of zerobuf
+                        else:
+                            cxxtype = "std::vector< {0} >".format(emit.types[member[2]][1]) # static array of POD
+
+                valueName = cxxname + 'Value'
+                memberArgs.append("const {0}& {1}".format(cxxtype, valueName))
+                initializers += "    set{0}({1});\n".format(cxxName, valueName)
+
+            emitFunction( None,
+                          "{0}( {1} )".format(item[1], ', '.join(memberArgs)),
+                          ": {0}( ::zerobuf::AllocatorPtr( new ::zerobuf::NonMovingAllocator( {1}, {2} )))\n"
+                          "{{\n{3}}}\n".format( item[1], emit.offset, emit.numDynamic, initializers ))
+
+            # copy ctor
             emitFunction( None,
                           "{0}( const {0}& from )".format( item[1] ),
                           ": {0}( ::zerobuf::AllocatorPtr( new ::zerobuf::NonMovingAllocator( {1}, {2} )))\n".format( item[1], emit.offset, emit.numDynamic ) +
@@ -455,6 +484,8 @@ def emit():
                           "    *this = from;\n" +
                           "}\n",
                           explicit = False )
+
+            # copy-from-baseclass ctor
             emitFunction( None,
                           "{0}( const ::zerobuf::Zerobuf& from )".format( item[1] ),
                           ": {0}( ::zerobuf::AllocatorPtr( new ::zerobuf::NonMovingAllocator( {1}, {2} )))\n".format( item[1], emit.offset, emit.numDynamic ) +
@@ -462,6 +493,10 @@ def emit():
                           "    *this = from;\n" +
                           "}\n",
                           explicit = False )
+
+            initializers = ''
+            if emit.initializers:
+                initializers = "    , {0}\n".format( '\n    , '.join( emit.initializers ))
 
             # Zerobuf object owns allocator!
             emitFunction( None, "{0}( ::zerobuf::AllocatorPtr allocator )".format( item[1] ),
