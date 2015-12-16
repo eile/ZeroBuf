@@ -478,19 +478,19 @@ def emit():
 
             # copy ctor
             emitFunction( None,
-                          "{0}( const {0}& from )".format( item[1] ),
+                          "{0}( const {0}& rhs )".format( item[1] ),
                           ": {0}( ::zerobuf::AllocatorPtr( new ::zerobuf::NonMovingAllocator( {1}, {2} )))\n".format( item[1], emit.offset, emit.numDynamic ) +
                           "{\n" +
-                          "    *this = from;\n" +
+                          "    *this = rhs;\n" +
                           "}\n",
                           explicit = False )
 
             # copy-from-baseclass ctor
             emitFunction( None,
-                          "{0}( const ::zerobuf::Zerobuf& from )".format( item[1] ),
+                          "{0}( const ::zerobuf::Zerobuf& rhs )".format( item[1] ),
                           ": {0}( ::zerobuf::AllocatorPtr( new ::zerobuf::NonMovingAllocator( {1}, {2} )))\n".format( item[1], emit.offset, emit.numDynamic ) +
                           "{\n" +
-                          "    *this = from;\n" +
+                          "    *this = rhs;\n" +
                           "}\n",
                           explicit = False )
 

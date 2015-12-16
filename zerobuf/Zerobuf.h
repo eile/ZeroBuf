@@ -10,7 +10,6 @@
 #include <zerobuf/api.h>
 #include <zerobuf/Types.h>
 #include <servus/uint128_t.h>
-#include <memory> // std::unique_ptr
 
 namespace zerobuf
 {
@@ -24,7 +23,7 @@ namespace zerobuf
 class Zerobuf
 {
 public:
-    Zerobuf( Zerobuf&& from );
+    Zerobuf( Zerobuf&& rhs );
 
     ZEROBUF_API Zerobuf& operator = ( const Zerobuf& rhs );
     ZEROBUF_API Zerobuf& operator = ( Zerobuf&& rhs );
@@ -66,21 +65,19 @@ public:
     ZEROBUF_API bool operator == ( const Zerobuf& rhs ) const;
     ZEROBUF_API bool operator != ( const Zerobuf& rhs ) const;
 
-    /* @internal */
-    const Allocator& getAllocator() const;
-
 protected:
     explicit Zerobuf( AllocatorPtr alloc ); // takes ownership of alloc
     Zerobuf( const Zerobuf& zerobuf ) = delete;
     ZEROBUF_API virtual ~Zerobuf();
 
-    Allocator& getAllocator();
+    // used by generated ZeroBuf objects
+    ZEROBUF_API const Allocator& getAllocator() const;
+    ZEROBUF_API Allocator& getAllocator();
 
     ZEROBUF_API void _copyZerobufArray( const void* data, size_t size,
                                         size_t arrayNum );
 private:
-    class Impl;
-    std::unique_ptr<Impl> _impl;
+    AllocatorPtr _allocator;
 
     Zerobuf() = delete;
 };
