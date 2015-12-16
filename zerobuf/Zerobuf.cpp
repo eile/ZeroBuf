@@ -26,10 +26,10 @@ Zerobuf::Zerobuf( AllocatorPtr alloc )
     }
 }
 
-Zerobuf::Zerobuf( Zerobuf&& rhs )
-{
-    *this = rhs;
-}
+//Zerobuf::Zerobuf( Zerobuf&& rhs )
+//{
+//    operator=( std::move( rhs ));
+//}
 
 Zerobuf::~Zerobuf()
 {}
@@ -48,21 +48,21 @@ Zerobuf& Zerobuf::operator = ( const Zerobuf& rhs )
     return *this;
 }
 
-Zerobuf& Zerobuf::operator = ( Zerobuf&& rhs )
-{
-    if( this == &rhs || !_allocator || !rhs._allocator )
-        return *this;
+//Zerobuf& Zerobuf::operator = ( Zerobuf&& rhs )
+//{
+//    if( this == &rhs || !_allocator || !rhs._allocator )
+//        return *this;
 
-    if( getZerobufType() != rhs.getZerobufType( ))
-        throw std::runtime_error( "Can't assign Zerobuf of a different type" );
+//    if( getZerobufType() != rhs.getZerobufType( ))
+//        throw std::runtime_error( "Can't assign Zerobuf of a different type" );
 
-    notifyChanging();
-    rhs.notifyChanging();
-    _allocator = std::move( rhs._allocator );
-    rhs._allocator.reset( new NonMovingAllocator( getZerobufStaticSize(),
-                                                  getZerobufNumDynamics( )));
-    return *this;
-}
+//    notifyChanging();
+//    rhs.notifyChanging();
+//    _allocator = std::move( rhs._allocator );
+//    rhs._allocator.reset( new NonMovingAllocator( rhs.getZerobufStaticSize(),
+//                                                  rhs.getZerobufNumDynamics( )));
+//    return *this;
+//}
 
 const void* Zerobuf::getZerobufData() const
 {

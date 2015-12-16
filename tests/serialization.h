@@ -180,8 +180,8 @@ test::TestSchema getTestObject()
 
 void checkTestObject( const test::TestNested& nested )
 {
-    BOOST_CHECK_EQUAL( nested.getIntvalue(), 42  );
-    BOOST_CHECK_EQUAL( nested.getUintvalue(), 43  );
+    BOOST_CHECK_EQUAL( nested.getIntvalue(), 42 );
+    BOOST_CHECK_EQUAL( nested.getUintvalue(), 43 );
 }
 
 void checkTestObject( const test::TestSchema& object )

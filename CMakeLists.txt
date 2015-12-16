@@ -25,6 +25,7 @@ common_package(Boost 1.49 COMPONENTS unit_test_framework)
 common_package(Servus REQUIRED)
 common_package_post()
 
+set(LCOV_EXCLUDE "zerobuf/jsoncpp/*")
 add_subdirectory(zerobuf)
 add_subdirectory(tests)
 

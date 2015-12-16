@@ -194,4 +194,8 @@ BOOST_AUTO_TEST_CASE(rawZerobufFromJSON)
 
     const test::TestSchema object( generic );
     checkTestObject( object );
+    BOOST_CHECK_EQUAL( object.getZerobufNumDynamics(),
+                       generic.getZerobufNumDynamics( ));
+    BOOST_CHECK_EQUAL( object.getZerobufStaticSize(),
+                       generic.getZerobufStaticSize( ));
 }

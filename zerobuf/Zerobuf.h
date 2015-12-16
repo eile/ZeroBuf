@@ -73,8 +73,8 @@ public:
     ZEROBUF_API Zerobuf& operator = ( const Zerobuf& rhs );
 
     /** Move semantics */
-    ZEROBUF_API Zerobuf( Zerobuf&& rhs );
-    ZEROBUF_API Zerobuf& operator = ( Zerobuf&& rhs );
+//    ZEROBUF_API Zerobuf( Zerobuf&& rhs );
+//    ZEROBUF_API Zerobuf& operator = ( Zerobuf&& rhs );
 
     /** Compare semantics */
     ZEROBUF_API bool operator == ( const Zerobuf& rhs ) const;
