@@ -189,8 +189,9 @@ def emitDynamic( spec ):
         digest = hashlib.md5( "{0}".format( cxxtype )).hexdigest()
         high = digest[ 0 : len( digest ) - 16 ]
         low  = digest[ len( digest ) - 16: ]
-        zerobufType = "::zerobuf::uint128_t( 0x{0}ull, 0x{1}ull )".format( high,
-                                                                        low )
+        zerobufType = "::zerobuf::uint128_t( 0x{0}ull, 0x{1}ull )".format( high, low )
+        elemSize = 0
+
     emit.schema.append( "std::make_tuple( \"{0}\", {1}, {2}, {3}, 0 )".
                         format( spec[0], zerobufType, emit.offset, elemSize ))
 
@@ -490,7 +491,7 @@ def emit():
                           "{0}( const ::zerobuf::Zerobuf& rhs )".format( item[1] ),
                           ": {0}( ::zerobuf::AllocatorPtr( new ::zerobuf::NonMovingAllocator( {1}, {2} )))\n".format( item[1], emit.offset, emit.numDynamic ) +
                           "{\n" +
-                          "    *this = rhs;\n" +
+                          "    ::zerobuf::Zerobuf::operator =( rhs );\n" +
                           "}\n",
                           explicit = False )
 

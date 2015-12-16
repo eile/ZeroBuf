@@ -74,7 +74,7 @@ public:
         addConverter< uint32_t >( "uint32_t" );
         addConverter< int64_t >( "int64_t" );
         addConverter< uint64_t >( "uint64_t" );
-        addConverter< servus::uint128_t >( "servus::uint128_t" );
+        addConverter< uint128_t >( "::zerobuf::uint128_t" );
         addConverter< float >( "float" );
         addConverter< double >( "double" );
         addConverter< bool >( "bool" );
@@ -83,18 +83,18 @@ public:
             addConverter( schema );
     }
 
-    bool toJSON( const Allocator& allocator, Json::Value& value ) const
+    bool toJSON( const Allocator& allocator, Json::Value& jsonValue ) const
     {
         const Schema& root = _schemas.front();
         const Schema::Field field( "root", root.type, 0, root.staticSize, 1 );
-        return _fromZeroBuf( allocator, field, root, value );
+        return _fromZeroBuf( allocator, field, root, jsonValue );
     }
 
-    bool fromJSON( Allocator& allocator, const Json::Value& value ) const
+    bool fromJSON( Allocator& allocator, const Json::Value& jsonValue ) const
     {
         const Schema& root = _schemas.front();
         const Schema::Field field( "root", root.type, 0, root.staticSize, 1 );
-        return _toZeroBuf( allocator, field, root, value );
+        return _toZeroBuf( allocator, field, root, jsonValue );
     }
 
 private:
@@ -141,40 +141,40 @@ private:
     }
 
     bool _toJSONFunc( const Allocator& allocator, const Schema::Field& field,
-                      Json::Value& value ) const
+                      Json::Value& jsonValue ) const
     {
         const uint128_t& type = _getType( field );
         const auto& func = _toJSONMap.find( type );
         if( func == _toJSONMap.end( ))
         {
-            std::cerr << "Missing converter for type " << _getName( field )
-                      << std::endl;
+            std::cerr << "Missing converter for type of field "
+                      << _getName( field ) << std::endl;
             return false;
         }
-        return func->second( allocator, field, value );
+        return func->second( allocator, field, jsonValue );
     }
 
     bool _fromJSONFunc( Allocator& allocator, const Schema::Field& field,
-                       const Json::Value& value ) const
+                        const Json::Value& jsonValue ) const
     {
         const uint128_t& type = _getType( field );
         const auto& func = _fromJSONMap.find( type );
         if( func == _fromJSONMap.end( ))
         {
-            std::cerr << "Missing converter for type " << _getName( field )
-                      << std::endl;
+            std::cerr << "Missing converter for type of field "
+                      << _getName( field ) << std::endl;
             return false;
         }
-        return func->second( allocator, field, value );
+        return func->second( allocator, field, jsonValue );
     }
 
     // ZeroBuf object conversion
     bool _fromZeroBuf( const Allocator& allocator, const Schema::Field& field,
-                       const Schema& schema, Json::Value& value ) const
+                       const Schema& schema, Json::Value& jsonValue ) const
     {
         switch( _getNElements( field ))
         {
-        case 0: // dynamic arroy
+        case 0: // dynamic array
             throw std::runtime_error(
                 "Dynamic arrays of ZeroBuf objects not implemented" );
         case 1:
@@ -184,7 +184,7 @@ private:
                 const ConstStaticSubAllocator subAllocator( allocator,
                                                             _getOffset( field ),
                                                             _getSize( field ));
-                return _fromZeroBufItem( subAllocator, schema, value );
+                return _fromZeroBufItem( subAllocator, schema, jsonValue );
             }
 
             const bool isRoot = _getOffset( field ) == 0;
@@ -193,7 +193,7 @@ private:
                                                            schema.numDynamics,
                                                            schema.staticSize );
             return _fromZeroBufItem( isRoot ? allocator : subAllocator,
-                                     schema, value );
+                                     schema, jsonValue );
         }
 
         default: // static array
@@ -212,44 +212,45 @@ private:
     }
 
     bool _fromZeroBufItem( const Allocator& allocator, const Schema& schema,
-                           Json::Value& value ) const
+                           Json::Value& jsonValue ) const
     {
         for( const Schema::Field& field : schema.fields )
         {
             const std::string& name = _getName( field );
-            value[ name ] = Json::Value();
-            if( !_toJSONFunc( allocator, field, value[ name ]))
+            jsonValue[ name ] = Json::Value();
+            if( !_toJSONFunc( allocator, field, jsonValue[ name ]))
                 return false;
         }
         return true;
     }
 
     bool _toZeroBuf( Allocator& allocator, const Schema::Field& field,
-                    const Schema& schema, const Json::Value& value ) const
+                     const Schema& schema, const Json::Value& jsonValue ) const
     {
         switch( _getNElements( field ))
         {
-        case 0: // dynamic arroy
+        case 0: // dynamic array
             throw std::runtime_error(
                 "Dynamic arrays of ZeroBuf objects not implemented" );
             return false;
 
         case 1:
         {
+            const bool isRoot = _getOffset( field ) == 0;
             if( _isStatic( field ))
             {
                 StaticSubAllocator subAllocator( allocator, _getOffset( field ),
                                                  _getSize( field ));
-                return _toZeroBufItem( subAllocator, schema, value );
+                return _toZeroBufItem( isRoot ? allocator : subAllocator,
+                                       schema, jsonValue );
             }
 
-            const bool isRoot = _getOffset( field ) == 0;
             const size_t index = isRoot ? 0 : _getIndex( field );
             NonMovingSubAllocator subAllocator( allocator, index,
                                                 schema.numDynamics,
                                                 schema.staticSize );
             return _toZeroBufItem( isRoot ? allocator : subAllocator,
-                                   schema, value );
+                                   schema, jsonValue );
         }
 
         default: // static array
@@ -259,12 +260,12 @@ private:
     }
 
     bool _toZeroBufItem( Allocator& allocator, const Schema& schema,
-                         const Json::Value& value ) const
+                         const Json::Value& jsonValue ) const
     {
         for( const Schema::Field& field : schema.fields )
         {
             const std::string& name = _getName( field );
-            if( !_fromJSONFunc( allocator, field, value[ name ]))
+            if( !_fromJSONFunc( allocator, field, jsonValue[ name ]))
                 return false;
         }
         return true;
@@ -273,7 +274,7 @@ private:
     // builtin conversions
     template< class T >
     bool _toJSON( const Allocator& allocator, const Schema::Field& field,
-                  Json::Value& value ) const
+                  Json::Value& jsonValue ) const
     {
         const size_t offset = _getOffset( field );
         const size_t nElements = _getNElements( field );
@@ -281,20 +282,19 @@ private:
         switch( nElements )
         {
         case 0: // dynamic array
-            return _toJSONDynamic< T >( allocator, field, value );
+            return _toJSONDynamic< T >( allocator, field, jsonValue );
 
         case 1: // single element
-            return _toJSONItem< T >( allocator.getItem< T >( offset ), value );
+            return _toJSONItem< T >( allocator.getItem< T >( offset ),
+                                     jsonValue );
 
         default: // static array
         {
             const T* data = allocator.getItemPtr< T >( offset );
-            value.resize( nElements );
+            jsonValue.resize( nElements );
             for( size_t i = 0; i < nElements; ++i )
-                if( !_toJSONItem< T >( data[ i ], value[ uint32_t( i )]))
+                if( !_toJSONItem< T >( data[ i ], jsonValue[ uint32_t( i )]))
                     return false;
-            std::cerr << "JSON array '" << _getName( field )  << "' size "
-                      << nElements << std::endl;
             return true;
         }
         }
@@ -316,7 +316,7 @@ private:
 
     template< class T >
     bool _toJSONDynamic( const Allocator& allocator, const Schema::Field& field,
-                         Json::Value& value ) const
+                         Json::Value& jsonValue ) const
     {
         if( _isStatic( field ))
             throw std::runtime_error( "Internal JSON converter error" );
@@ -324,39 +324,40 @@ private:
         const size_t index = _getIndex( field );
         ConstVector< T > values( allocator, index );
         for( size_t i = 0; i < values.size(); ++i )
-            if( !_toJSONItem( values[i], value[ uint32_t( i )]))
+            if( !_toJSONItem( values[i], jsonValue[ uint32_t( i )]))
                 return false;
         return true;
     }
 
     template< class T >
     bool _fromJSON( Allocator& allocator, const Schema::Field& field,
-                    const Json::Value& value )
+                    const Json::Value& jsonValue )
     {
         const size_t offset = _getOffset( field );
         const size_t nElements = _getNElements( field );
 
         switch( nElements )
         {
-        case 0: // dynamic arroy
-            return _fromJSONDynamic< T >( allocator, field, value );
+        case 0: // dynamic array
+            return _fromJSONDynamic< T >( allocator, field, jsonValue );
 
         case 1: // single element
-            return _fromJSONItem< T >( allocator.getItem<T>( offset ), value );
+            return _fromJSONItem< T >( allocator.getItem<T>( offset ),
+                                       jsonValue );
 
         default: // static array
         {
-            if( value.size() != nElements )
+            if( jsonValue.size() != nElements )
             {
                 std::cerr << "JSON array '" << _getName( field ) << "': '"
-                          << value << "' does not match array size "
+                          << jsonValue << "' does not match array size "
                           << nElements << std::endl;
                 return false;
             }
 
             T* data = allocator.getItemPtr< T >( offset );
             for( size_t i = 0; i < nElements; ++i )
-                if( !_fromJSONItem< T >( data[ i ], value[ uint32_t( i )]))
+                if( !_fromJSONItem< T >( data[ i ], jsonValue[ uint32_t( i )]))
                     return false;
             return true;
         }
@@ -379,29 +380,21 @@ private:
 
     template< class T >
     bool _fromJSONDynamic( Allocator& allocator, const Schema::Field& field,
-                           const Json::Value& value )
+                           const Json::Value& jsonValue )
     {
         if( _isStatic( field ))
             throw std::runtime_error( "Internal JSON converter error" );
 
         const size_t index = _getIndex( field );
-        const size_t size = value.size();
+        const size_t size = jsonValue.size();
         T* data = reinterpret_cast< T* >(
             allocator.updateAllocation( index, size * sizeof( T )));
         for( size_t i = 0; i < size; ++i )
-            if( !_fromJSONItem< T >( data[i], value[ uint32_t( i )]))
+            if( !_fromJSONItem< T >( data[i], jsonValue[ uint32_t( i )]))
                 return false;
         return true;
     }
 };
-
-template<> bool JSONConverter::_toJSONItem< servus::uint128_t >(
-    const uint128_t& value, Json::Value& jsonValue ) const
-{
-    jsonValue["high"] = Json::UInt64( value.high( ));
-    jsonValue["low"] = Json::UInt64( value.low( ));
-    return true;
-}
 
 template<> bool JSONConverter::_toJSONItem< std::string >(
     const std::string& value, Json::Value& jsonValue ) const
@@ -410,20 +403,51 @@ template<> bool JSONConverter::_toJSONItem< std::string >(
     return true;
 }
 
-// template<> bool JSONConverter::_toJSONItem< char >(
-//     const Allocator& allocator, const Schema::Field& field, Json::Value& value ) const
-// {
-//     const size_t index = _getIndex( field );
-//     const uint8_t* ptr = allocator.getDynamic< const uint8_t >( index );
-//     const std::string string( ptr, ptr + allocator.getDynamicSize( index ));
-//     return _toJSONItem< std::string >( string, value );
-// }
+template<> bool JSONConverter::_toJSONItem< uint128_t >(
+    const uint128_t& value, Json::Value& jsonValue ) const
+{
+    jsonValue["high"] = Json::UInt64( value.high( ));
+    jsonValue["low"] = Json::UInt64( value.low( ));
+    return true;
+}
 
-template<> bool JSONConverter::_fromJSONItem< servus::uint128_t >(
+template<>
+bool JSONConverter::_toJSONDynamic< char >( const Allocator& allocator,
+                                            const Schema::Field& field,
+                                            Json::Value& jsonValue ) const
+{
+    if( _isStatic( field ))
+        throw std::runtime_error( "Internal JSON converter error" );
+
+    const size_t index = _getIndex( field );
+    const size_t size = allocator.getDynamicSize( index );
+
+    const uint8_t* ptr =  allocator.getDynamic< const uint8_t >( index );
+    const std::string value( ptr, ptr + size );
+    return _toJSONItem( value, jsonValue );
+}
+
+template<>
+bool JSONConverter::_fromJSONDynamic< char >( Allocator& allocator,
+                                              const Schema::Field& field,
+                                              const Json::Value& jsonValue )
+{
+    if( _isStatic( field ))
+        throw std::runtime_error( "Internal JSON converter error" );
+
+    const size_t index = _getIndex( field );
+    const std::string& value = jsonValue.asString();
+
+    void* array = allocator.updateAllocation( index, value.length( ));
+    ::memcpy( array, value.c_str(), value.length( ));
+    return true;
+}
+
+template<> bool JSONConverter::_fromJSONItem< uint128_t >(
     uint128_t& value, const Json::Value& jsonValue )
 {
-    value = servus::uint128_t( jsonValue["high"].asUInt64(),
-                               jsonValue["low"].asUInt64( ));
+    value = uint128_t( jsonValue["high"].asUInt64(),
+                       jsonValue["low"].asUInt64( ));
     return true;
 }
 
@@ -433,17 +457,6 @@ template<> bool JSONConverter::_fromJSONItem< std::string >(
     value = jsonValue.asString();
     return true;
 }
-
-// template<> bool JSONConverter::_fromJSONDynamic< char >(
-//     Allocator& allocator, const Schema::Field& field, const Json::Value& value )
-// {
-//     const size_t index = _getIndex( field );
-//     const std::string& string = value.asString();
-//     void* data = allocator.updateAllocation( index, string.length( ));
-//     if( !string.empty( ))
-//         ::memcpy( data, string.data(), string.length( ));
-//     return true;
-// }
 
 }
 } // zerobuf

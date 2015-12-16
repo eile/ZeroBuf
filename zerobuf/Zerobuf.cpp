@@ -106,12 +106,16 @@ bool Zerobuf::fromJSON( const std::string& string )
         throw std::runtime_error(
             "Can't convert empty Zerobuf object from JSON" );
 
-    notifyChanging();
-
     Json::Value json;
     Json::Reader reader;
-    reader.parse( string, json );
+    if( !reader.parse( string, json ))
+    {
+        std::cerr << "Error parsing JSON: "
+                  << reader.getFormattedErrorMessages() << std::endl;
+        return false;
+    }
 
+    notifyChanging();
     JSONConverter converter( getSchemas( ));
     return converter.fromJSON( *_allocator, json );
 }
