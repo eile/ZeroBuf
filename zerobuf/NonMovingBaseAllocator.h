@@ -24,7 +24,6 @@ public:
 
 protected:
     virtual void _resize( size_t newSize ) = 0;
-    ZEROBUF_API size_t getNumDynamic() const { return _numDynamic; }
 
 private:
     NonMovingBaseAllocator( const NonMovingBaseAllocator& ) = delete;
