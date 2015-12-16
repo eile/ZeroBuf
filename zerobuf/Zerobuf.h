@@ -23,15 +23,22 @@ namespace zerobuf
 class Zerobuf
 {
 public:
-    Zerobuf( Zerobuf&& rhs );
-
-    ZEROBUF_API Zerobuf& operator = ( const Zerobuf& rhs );
-    ZEROBUF_API Zerobuf& operator = ( Zerobuf&& rhs );
-
+    /** @return the type of this object, hashed from its schema. */
     virtual uint128_t getZerobufType() const = 0;
+
+    /** @return the static size of this object in bytes. */
     virtual size_t getZerobufStaticSize() const = 0;
+
+    /** @return the number of dynamics fields of this object. */
     virtual size_t getZerobufNumDynamics() const = 0;
+
+    /** @return the schema of this object to construct a zerobuf::Generic. */
     virtual Schema getSchema() const = 0;
+
+    /**
+     * @return the list schemas in case nested ZeroBuf objects are used in this
+     *         object.
+     */
     virtual Schemas getSchemas() const = 0;
 
     /** Called if any data in this object is about to change. */
@@ -62,6 +69,14 @@ public:
      */
     ZEROBUF_API bool fromJSON( const std::string& json );
 
+    /** Copy semantics */
+    ZEROBUF_API Zerobuf& operator = ( const Zerobuf& rhs );
+
+    /** Move semantics */
+    ZEROBUF_API Zerobuf( Zerobuf&& rhs );
+    ZEROBUF_API Zerobuf& operator = ( Zerobuf&& rhs );
+
+    /** Compare semantics */
     ZEROBUF_API bool operator == ( const Zerobuf& rhs ) const;
     ZEROBUF_API bool operator != ( const Zerobuf& rhs ) const;
 

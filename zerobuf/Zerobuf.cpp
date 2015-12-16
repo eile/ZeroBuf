@@ -50,7 +50,7 @@ Zerobuf& Zerobuf::operator = ( const Zerobuf& rhs )
 
 Zerobuf& Zerobuf::operator = ( Zerobuf&& rhs )
 {
-    if( this == &rhs || !_allocator || !rhs._allocator)
+    if( this == &rhs || !_allocator || !rhs._allocator )
         return *this;
 
     if( getZerobufType() != rhs.getZerobufType( ))
@@ -60,7 +60,7 @@ Zerobuf& Zerobuf::operator = ( Zerobuf&& rhs )
     rhs.notifyChanging();
     _allocator = std::move( rhs._allocator );
     rhs._allocator.reset( new NonMovingAllocator( getZerobufStaticSize(),
-                                                   getZerobufNumDynamics( )));
+                                                  getZerobufNumDynamics( )));
     return *this;
 }
 
