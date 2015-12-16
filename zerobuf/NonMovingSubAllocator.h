@@ -20,7 +20,6 @@ public:
     ZEROBUF_API NonMovingSubAllocatorBase( A& parent, size_t index,
                                            size_t numDynamic,
                                            size_t staticSize );
-    ZEROBUF_API NonMovingSubAllocatorBase( const NonMovingSubAllocatorBase<A>&);
     ZEROBUF_API ~NonMovingSubAllocatorBase();
 
 
@@ -33,6 +32,7 @@ private:
     A& _parent;
     size_t _index;
 
+    NonMovingSubAllocatorBase( const NonMovingSubAllocatorBase< A >& ) = delete;
     NonMovingSubAllocatorBase< A >& operator = (
         const NonMovingSubAllocatorBase< A >& ) = delete;
     void _resize( size_t newSize ) final;

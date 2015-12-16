@@ -20,14 +20,6 @@ NonMovingSubAllocatorBase< A >::NonMovingSubAllocatorBase(
     , _index( index )
 {}
 
-template< class A >
-NonMovingSubAllocatorBase< A >::NonMovingSubAllocatorBase(
-    const NonMovingSubAllocatorBase< A >& from )
-    : NonMovingBaseAllocator( from )
-    , _parent( from._parent )
-    , _index( from._index )
-{}
-
 template< class A > NonMovingSubAllocatorBase< A >::~NonMovingSubAllocatorBase()
 {}
 

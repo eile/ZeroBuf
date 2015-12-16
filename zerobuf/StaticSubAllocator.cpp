@@ -21,17 +21,8 @@ StaticSubAllocatorBase< A >::StaticSubAllocatorBase( A& parent,
 {}
 
 template< class A >
-StaticSubAllocatorBase< A >::StaticSubAllocatorBase(
-    const StaticSubAllocatorBase< A >& from )
-    : _parent( from._parent )
-    , _offset( from._offset )
-    , _size( from._size )
-{}
-
-template< class A >
 StaticSubAllocatorBase< A >::~StaticSubAllocatorBase()
 {}
-
 
 template< class A > uint8_t* StaticSubAllocatorBase< A >::getData()
 {

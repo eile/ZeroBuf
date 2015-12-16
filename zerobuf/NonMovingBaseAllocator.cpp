@@ -18,23 +18,6 @@ NonMovingBaseAllocator::NonMovingBaseAllocator( const size_t staticSize,
     , _numDynamic( numDynamic )
 {}
 
-NonMovingBaseAllocator::NonMovingBaseAllocator(
-    const NonMovingBaseAllocator& from )
-    : _staticSize( from._staticSize )
-    , _numDynamic( from._numDynamic )
-{}
-
-NonMovingBaseAllocator& NonMovingBaseAllocator::operator = (
-    const NonMovingBaseAllocator& rhs )
-{
-    if( this == &rhs )
-        return *this;
-
-    _staticSize = rhs._staticSize;
-    _numDynamic = rhs._numDynamic;
-    return *this;
-}
-
 NonMovingBaseAllocator::~NonMovingBaseAllocator()
 {}
 

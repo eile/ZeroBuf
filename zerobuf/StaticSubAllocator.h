@@ -17,7 +17,6 @@ template< class A > class StaticSubAllocatorBase : public Allocator
 public:
     ZEROBUF_API StaticSubAllocatorBase( A& parent, size_t offset,
                                         size_t size );
-    ZEROBUF_API StaticSubAllocatorBase( const StaticSubAllocatorBase< A >& );
     ZEROBUF_API ~StaticSubAllocatorBase();
 
     ZEROBUF_API uint8_t* getData() final;
@@ -31,8 +30,9 @@ private:
     size_t _size;
 
     uint8_t* updateAllocation( size_t index, size_t newSize ) final;
-    StaticSubAllocatorBase<A>& operator = ( const StaticSubAllocatorBase<A>& ) =
-        delete;
+    StaticSubAllocatorBase( const StaticSubAllocatorBase< A >& ) = delete;
+    StaticSubAllocatorBase< A >& operator = (
+            const StaticSubAllocatorBase< A >& ) = delete;
 };
 
 typedef StaticSubAllocatorBase< Allocator > StaticSubAllocator;

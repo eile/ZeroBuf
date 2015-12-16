@@ -20,25 +20,6 @@ NonMovingAllocator::NonMovingAllocator( const size_t staticSize,
     , _size( staticSize )
 {}
 
-NonMovingAllocator::NonMovingAllocator( const NonMovingAllocator& from )
-    : NonMovingBaseAllocator( from )
-    , _data( (uint8_t*)malloc( from._size ))
-    , _size( from._size )
-{
-    ::memcpy( _data, from._data, from._size );
-}
-
-NonMovingAllocator& NonMovingAllocator::operator = (
-    const NonMovingAllocator& rhs )
-{
-    if( this == &rhs )
-        return *this;
-
-    NonMovingBaseAllocator::operator = ( rhs );
-    copyBuffer( rhs._data, rhs._size );
-    return *this;
-}
-
 NonMovingAllocator::~NonMovingAllocator()
 {
     ::free( _data );
