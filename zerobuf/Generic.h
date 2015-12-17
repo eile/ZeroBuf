@@ -29,7 +29,6 @@ public:
     ZEROBUF_API uint128_t getZerobufType() const final;
     ZEROBUF_API size_t getZerobufStaticSize() const final;
     ZEROBUF_API size_t getZerobufNumDynamics() const final;
-    ZEROBUF_API Schema getSchema() const final;
     ZEROBUF_API Schemas getSchemas() const final;
 
 private:

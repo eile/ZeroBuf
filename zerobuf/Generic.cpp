@@ -18,22 +18,17 @@ Generic::Generic( const Schemas& schemas )
 
 uint128_t Generic::getZerobufType() const
 {
-    return getSchema().type;
+    return _schemas.front().type;
 }
 
 size_t Generic::getZerobufStaticSize() const
 {
-    return getSchema().staticSize;
+    return _schemas.front().staticSize;
 }
 
 size_t Generic::getZerobufNumDynamics() const
 {
-    return getSchema().numDynamics;
-}
-
-Schema Generic::getSchema() const
-{
-    return _schemas.front();
+    return _schemas.front().numDynamics;
 }
 
 Schemas Generic::getSchemas() const

@@ -188,7 +188,7 @@ BOOST_AUTO_TEST_CASE(rawZerobufToJSON)
 
 BOOST_AUTO_TEST_CASE(rawZerobufFromJSON)
 {
-    zerobuf::Schemas schemas = test::TestSchema::schemas();
+    const zerobuf::Schemas& schemas = test::TestSchema::schemas();
     zerobuf::Generic generic( schemas );
     generic.fromJSON( expectedJson );
 

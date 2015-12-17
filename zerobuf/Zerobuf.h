@@ -32,9 +32,6 @@ public:
     /** @return the number of dynamics fields of this object. */
     virtual size_t getZerobufNumDynamics() const = 0;
 
-    /** @return the schema of this object to construct a zerobuf::Generic. */
-    virtual Schema getSchema() const = 0;
-
     /**
      * @return the list schemas in case nested ZeroBuf objects are used in this
      *         object.
@@ -73,8 +70,8 @@ public:
     ZEROBUF_API Zerobuf& operator = ( const Zerobuf& rhs );
 
     /** Move semantics */
-//    ZEROBUF_API Zerobuf( Zerobuf&& rhs );
-//    ZEROBUF_API Zerobuf& operator = ( Zerobuf&& rhs );
+    ZEROBUF_API Zerobuf( Zerobuf&& rhs );
+    ZEROBUF_API Zerobuf& operator = ( Zerobuf&& rhs );
 
     /** Compare semantics */
     ZEROBUF_API bool operator == ( const Zerobuf& rhs ) const;
@@ -82,7 +79,6 @@ public:
 
 protected:
     explicit Zerobuf( AllocatorPtr alloc ); // takes ownership of alloc
-    Zerobuf( const Zerobuf& zerobuf ) = delete;
     ZEROBUF_API virtual ~Zerobuf();
 
     // used by generated ZeroBuf objects
@@ -95,6 +91,7 @@ private:
     AllocatorPtr _allocator;
 
     Zerobuf() = delete;
+    Zerobuf( const Zerobuf& zerobuf ) = delete;
 };
 
 }
