@@ -26,9 +26,15 @@ const std::string& _getName( const Schema::Field& field )
     return std::get< Schema::FIELD_NAME >( field );
 }
 
-bool _isStatic( const Schema::Field& field )
+bool _isStaticElement( const Schema::Field& field )
 {
     return std::get< Schema::FIELD_SIZE >( field ) > 0;
+}
+
+bool _isStatic( const Schema::Field& field )
+{
+    return std::get< Schema::FIELD_SIZE >( field ) > 0 &&
+           std::get< Schema::FIELD_ELEMENTS >( field ) > 0;
 }
 
 size_t _getOffset( const Schema::Field& field )
@@ -179,7 +185,7 @@ private:
                 "Dynamic arrays of ZeroBuf objects not implemented" );
         case 1:
         {
-            if( _isStatic( field ))
+            if( _isStaticElement( field ))
             {
                 const ConstStaticSubAllocator subAllocator( allocator,
                                                             _getOffset( field ),
@@ -237,7 +243,7 @@ private:
         case 1:
         {
             const bool isRoot = _getOffset( field ) == 0;
-            if( _isStatic( field ))
+            if( _isStaticElement( field ))
             {
                 StaticSubAllocator subAllocator( allocator, _getOffset( field ),
                                                  _getSize( field ));

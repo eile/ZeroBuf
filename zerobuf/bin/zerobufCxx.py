@@ -190,7 +190,6 @@ def emitDynamic( spec ):
         high = digest[ 0 : len( digest ) - 16 ]
         low  = digest[ len( digest ) - 16: ]
         zerobufType = "::zerobuf::uint128_t( 0x{0}ull, 0x{1}ull )".format( high, low )
-        elemSize = 0
 
     emit.schema.append( "std::make_tuple( \"{0}\", {1}, {2}, {3}, 0 )".
                         format( spec[0], zerobufType, emit.offset, elemSize ))
