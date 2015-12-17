@@ -76,8 +76,8 @@ table TestSchema {
   enumeration: TestEnum;
   enumerations: [TestEnum:2];
   nested: TestNested;
-  //nestedarray: [TestNested:4]; // unsupported in JSON right now
-  //nesteddynamic: [TestNested]; // unsupported in JSON right now
+  nestedarray: [TestNested:4];
+  nesteddynamic: [TestNested];
 }
 
 root_type TestSchema;

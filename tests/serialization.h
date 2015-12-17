@@ -75,81 +75,9 @@ test::TestSchema getTestObject()
 
     // Write nested table using a stack object
     test::TestNested nested;
-    nested.setIntvalue( intMagic - 1 );
-    nested.setUintvalue( uintMagic - 1 );
-    BOOST_CHECK_EQUAL( nested.getIntvalue(), intMagic - 1 );
-    BOOST_CHECK_EQUAL( nested.getUintvalue(), uintMagic - 1 );
-
+    nested.setIntvalue( intMagic );
+    nested.setUintvalue( uintMagic );
     object.setNested( nested );
-    BOOST_CHECK_EQUAL( object.getNested().getIntvalue(), intMagic - 1 );
-    BOOST_CHECK_EQUAL( object.getNested().getUintvalue(), uintMagic - 1 );
-
-    const test::TestSchema& constObject = object;
-    BOOST_CHECK_EQUAL( constObject.getNested().getIntvalue(), intMagic - 1  );
-    BOOST_CHECK_EQUAL( constObject.getNested().getUintvalue(), uintMagic - 1 );
-
-    // Writable copy of the table is acquired from parent schema
-    test::TestNested& mutableNested = object.getNested();
-    mutableNested.setIntvalue( intMagic );
-    mutableNested.setUintvalue( uintMagic );
-    BOOST_CHECK_EQUAL( mutableNested.getIntvalue(), intMagic  );
-    BOOST_CHECK_EQUAL( mutableNested.getUintvalue(), uintMagic  );
-    BOOST_CHECK_EQUAL( object.getNested().getIntvalue(), intMagic  );
-    BOOST_CHECK_EQUAL( object.getNested().getUintvalue(), uintMagic  );
-
-    // Non writable copy of the table is acquired from parent schema
-    const test::TestNested& constNested = constObject.getNested();
-    BOOST_CHECK_EQUAL( constNested.getIntvalue(), intMagic  );
-    BOOST_CHECK_EQUAL( constNested.getUintvalue(), uintMagic  );
-
-    // Copy of non writable object should write into it's own memory
-    test::TestNested nestedCopy = constObject.getNested();
-    BOOST_CHECK_EQUAL( nestedCopy.getIntvalue(), intMagic  );
-    BOOST_CHECK_EQUAL( nestedCopy.getUintvalue(), uintMagic  );
-
-    nestedCopy.setIntvalue( 2 * intMagic );
-    nestedCopy.setUintvalue( 2 * uintMagic );
-    BOOST_CHECK_EQUAL( nestedCopy.getIntvalue(), 2 * intMagic  );
-    BOOST_CHECK_EQUAL( nestedCopy.getUintvalue(), 2 * uintMagic  );
-    BOOST_CHECK_EQUAL( object.getNested().getIntvalue(), intMagic  );
-    BOOST_CHECK_EQUAL( object.getNested().getUintvalue(), uintMagic  );
-
-#if 0 // unsupported in JSON right now
-    // Writable copy of the table is acquired from parent schema
-    std::array< test::TestNested, 4 >& nestedArray = object.getNestedarray();
-    BOOST_CHECK_EQUAL( nestedArray.size(), 4 );
-
-    intMagic = 42;
-    uintMagic = 43;
-    for( test::TestNested& inner : nestedArray )
-    {
-        inner.setIntvalue( intMagic++ );
-        inner.setUintvalue( uintMagic++ );
-        BOOST_CHECK_EQUAL(
-            object.getNestedarray()[ intMagic - 43 ].getIntvalue(),
-            intMagic - 1 );
-    }
-
-    // Non writable copy of the tables are acquired from parent schema
-    const std::array< test::TestNested, 4 >& constArray =
-                                                   constObject.getNestedarray();
-    intMagic = 42;
-    uintMagic = 43;
-    for( const test::TestNested& inner : constArray )
-    {
-        BOOST_CHECK_EQUAL( inner.getIntvalue(), intMagic++ );
-        BOOST_CHECK_EQUAL( inner.getUintvalue(), uintMagic++  );
-
-        test::TestNested copy( inner );
-        copy.setIntvalue( 42 );
-        BOOST_CHECK_EQUAL( copy.getIntvalue(), 42 );
-        BOOST_CHECK_EQUAL(
-            object.getNestedarray()[ intMagic - 43 ].getIntvalue(),
-            intMagic - 1 );
-    }
-
-    intMagic = 42;
-    uintMagic = 43;
 
     // Writable nested tables
     std::array< test::TestNested, 4 > nesteds;
@@ -173,7 +101,6 @@ test::TestSchema getTestObject()
         nestedDyn.push_back( inner );
     }
     object.setNesteddynamic( nestedDyn );
-#endif
 
     return object;
 }
@@ -207,9 +134,16 @@ void checkTestObject( const test::TestSchema& object )
     BOOST_CHECK( object.getBoolvalue( ));
     BOOST_CHECK_EQUAL( object.getStringvalueString(), "testmessage" );
 
+    BOOST_CHECK_EQUAL( object.getEnumeration(), test::TestEnum_SECOND );
+
+    const std::vector<test::TestEnum> testEnums = { test::TestEnum_FIRST,
+                                                    test::TestEnum_SECOND };
+    const std::vector<test::TestEnum>& result = object.getEnumerationsVector();
+    BOOST_CHECK_EQUAL_COLLECTIONS( testEnums.begin(), testEnums.end(),
+                                   result.begin(), result.end( ));
+
     checkTestObject( object.getNested( ));
 
-#if 0 // unsupported in JSON right now
     // Test retrieved tables
     const auto& tables = object.getNestedarray();
     int32_t intMagic = 42;
@@ -233,5 +167,4 @@ void checkTestObject( const test::TestSchema& object )
     }
 
     BOOST_REQUIRE_THROW( dynamicTables.data(), std::runtime_error );
-#endif
 }
