@@ -18,7 +18,8 @@ NonMovingSubAllocatorBase< A >::NonMovingSubAllocatorBase(
     : NonMovingBaseAllocator( staticSize, numDynamic )
     , _parent( parent )
     , _index( index )
-{}
+{
+}
 
 template< class A > NonMovingSubAllocatorBase< A >::~NonMovingSubAllocatorBase()
 {}
@@ -48,7 +49,7 @@ template< class A >
 void NonMovingSubAllocatorBase< A >::copyBuffer( const void* data,
                                                  const size_t size )
 {
-    void* to = _parent.updateAllocation( _index, size );
+    void* to = _parent.updateAllocation( _index, false /*no copy*/, size );
     ::memcpy( to, data, size );
 }
 
@@ -62,11 +63,7 @@ NonMovingSubAllocatorBase< const Allocator >::copyBuffer( const void*,
 template< class A >
 void NonMovingSubAllocatorBase< A >::_resize( const size_t newSize )
 {
-    const size_t oldSize = _parent.getDynamicSize( _index );
-    void* oldPtr = getData();
-    void* newPtr = _parent.updateAllocation( _index, newSize );
-    if( oldPtr != newPtr )
-        ::memcpy( newPtr, oldPtr, std::min( newSize, oldSize ));
+    _parent.updateAllocation( _index, true /*copy*/, newSize );
 }
 
 template<>

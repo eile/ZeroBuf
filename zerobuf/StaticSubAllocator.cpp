@@ -26,7 +26,7 @@ StaticSubAllocatorBase< A >::~StaticSubAllocatorBase()
 
 template< class A > uint8_t* StaticSubAllocatorBase< A >::getData()
 {
-    return _parent.template getItemPtr< uint8_t >( _offset );
+    return _parent.getData() + _offset;
 }
 
 template<> uint8_t* StaticSubAllocatorBase< const Allocator >::getData()
@@ -36,7 +36,7 @@ template<> uint8_t* StaticSubAllocatorBase< const Allocator >::getData()
 
 template< class A > const uint8_t* StaticSubAllocatorBase< A >::getData() const
 {
-    return _parent.template getItemPtr< uint8_t >( _offset );
+    return _parent.getData() + _offset;
 }
 
 template< class A >
@@ -47,13 +47,6 @@ void StaticSubAllocatorBase< A >::copyBuffer( const void* data,
         throw std::runtime_error(
             "Can't copy buffer of different size into a static-sized member" );
     ::memcpy( getData(), data, size );
-}
-
-template< class A >
-uint8_t* StaticSubAllocatorBase< A >::updateAllocation( size_t, size_t )
-{
-    throw std::runtime_error(
-        "Static-sized Zerobuf does not have dynamic allocations" );
 }
 
 template class StaticSubAllocatorBase< Allocator >;

@@ -3,10 +3,11 @@
  *                     Stefan.Eilemann@epfl.ch
  */
 
-#include <zerobuf/ConstVector.h>
 #include <zerobuf/Schema.h>
+#include <zerobuf/version.h>
 #include <zerobuf/jsoncpp/json/json.h>
 
+#include <cstring>
 #include <functional>
 #include <iostream>
 #include <string>
@@ -284,10 +285,10 @@ private:
             const size_t index = _getIndex( field );
             const size_t arraySize = jsonValue.size();
             const size_t elemSize = _getSize( field );
-            allocator.updateAllocation( index, arraySize * elemSize );
+            allocator.updateAllocation( index, false /*no copy*/,
+                                        arraySize * elemSize );
 
             const size_t offset = allocator.getDynamicOffset( index );
-            std::cout << offset << " " << elemSize << std::endl;
             for( size_t i = 0; i < arraySize; ++i )
             {
                 StaticSubAllocator subAllocator( allocator, offset + i*elemSize,
@@ -355,6 +356,7 @@ private:
     bool _toZeroBufItem( Allocator& allocator, const Schema& schema,
                          const Json::Value& jsonValue ) const
     {
+        allocator.getItem< uint32_t >( 0 ) = ZEROBUF_VERSION_ABI;
         for( const Schema::Field& field : schema.fields )
         {
             const std::string& name = _getName( field );
@@ -407,16 +409,18 @@ private:
     }
 
     template< class T >
-    bool _fromPODDynamic( const Allocator& allocator, const Schema::Field& field,
-                         Json::Value& jsonValue ) const
+    bool _fromPODDynamic( const Allocator& allocator,
+                          const Schema::Field& field,
+                          Json::Value& jsonValue ) const
     {
         if( _isStatic( field ))
             throw std::runtime_error( "Internal JSON converter error" );
 
         const size_t index = _getIndex( field );
-        ConstVector< T > values( allocator, index );
-        for( size_t i = 0; i < values.size(); ++i )
-            if( !_fromPODItem( values[i], jsonValue[ uint32_t( i )]))
+        const T* data = allocator.getDynamic< T >( index );
+        const size_t size = allocator.getDynamicSize( index ) / sizeof(T);
+        for( size_t i = 0; i < size; ++i )
+            if( !_fromPODItem( data[i], jsonValue[ uint32_t( i )]))
                 return false;
         return true;
     }
@@ -480,7 +484,9 @@ private:
         const size_t index = _getIndex( field );
         const size_t size = jsonValue.size();
         T* data = reinterpret_cast< T* >(
-            allocator.updateAllocation( index, size * sizeof( T )));
+            allocator.updateAllocation( index, false /*no copy*/,
+                                        size * sizeof( T )));
+
         for( size_t i = 0; i < size; ++i )
             if( !_toPODItem< T >( data[i], jsonValue[ uint32_t( i )]))
                 return false;
@@ -505,8 +511,8 @@ template<> bool JSONConverter::_fromPODItem< uint128_t >(
 
 template<>
 bool JSONConverter::_fromPODDynamic< char >( const Allocator& allocator,
-                                            const Schema::Field& field,
-                                            Json::Value& jsonValue ) const
+                                             const Schema::Field& field,
+                                             Json::Value& jsonValue ) const
 {
     if( _isStatic( field ))
         throw std::runtime_error( "Internal JSON converter error" );
@@ -521,8 +527,8 @@ bool JSONConverter::_fromPODDynamic< char >( const Allocator& allocator,
 
 template<>
 bool JSONConverter::_toPODDynamic< char >( Allocator& allocator,
-                                              const Schema::Field& field,
-                                              const Json::Value& jsonValue )
+                                           const Schema::Field& field,
+                                           const Json::Value& jsonValue )
 {
     if( _isStatic( field ))
         throw std::runtime_error( "Internal JSON converter error" );
@@ -530,7 +536,8 @@ bool JSONConverter::_toPODDynamic< char >( Allocator& allocator,
     const size_t index = _getIndex( field );
     const std::string& value = jsonValue.asString();
 
-    void* array = allocator.updateAllocation( index, value.length( ));
+    void* array = allocator.updateAllocation( index, false /*no copy*/,
+                                              value.length( ));
     ::memcpy( array, value.c_str(), value.length( ));
     return true;
 }

@@ -19,10 +19,11 @@ namespace zerobuf
 Zerobuf::Zerobuf( AllocatorPtr alloc )
     : _allocator( std::move( alloc ))
 {
-    if( _allocator )
+    if( _allocator &&
+        ((const Allocator*)_allocator.get( ))->getItem< uint32_t >( 0 ) !=
+        ZEROBUF_VERSION_ABI )
     {
-        uint32_t& version = _allocator->getItem< uint32_t >( 0 );
-        version = ZEROBUF_VERSION_ABI;
+        _allocator->getItem< uint32_t >( 0 ) = ZEROBUF_VERSION_ABI;
     }
 }
 
@@ -31,7 +32,9 @@ Zerobuf::Zerobuf( Zerobuf&& rhs )
     rhs.notifyChanging();
     _allocator = std::move( rhs._allocator );
     rhs._allocator.reset( new NonMovingAllocator( rhs.getZerobufStaticSize(),
-                                                  rhs.getZerobufNumDynamics( )));
+                                                 rhs.getZerobufNumDynamics( )));
+    uint32_t& version = rhs._allocator->getItem< uint32_t >( 0 );
+    version = ZEROBUF_VERSION_ABI;
 }
 
 Zerobuf::~Zerobuf()
@@ -61,9 +64,15 @@ Zerobuf& Zerobuf::operator = ( Zerobuf&& rhs )
 
     notifyChanging();
     rhs.notifyChanging();
-    _allocator = std::move( rhs._allocator );
+
+    if( _allocator->canMove() && rhs._allocator->canMove( ))
+        _allocator = std::move( rhs._allocator );
+    else // Sub allocator data can't be moved - need to copy
+        _allocator->copyBuffer( rhs._allocator->getData(),
+                                rhs._allocator->getSize( ));
+
     rhs._allocator.reset( new NonMovingAllocator( rhs.getZerobufStaticSize(),
-                                                  rhs.getZerobufNumDynamics( )));
+                                                 rhs.getZerobufNumDynamics( )));
     return *this;
 }
 
@@ -163,7 +172,8 @@ void Zerobuf::_copyZerobufArray( const void* data, const size_t size,
             "Can't copy data into empty Zerobuf object" );
 
     notifyChanging();
-    void* array = _allocator->updateAllocation( arrayNum, size );
+    void* array = _allocator->updateAllocation( arrayNum, false /*no copy*/,
+                                                size );
     ::memcpy( array, data, size );
 }
 

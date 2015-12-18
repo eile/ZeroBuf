@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(moveConstructCamera)
     BOOST_CHECK( camera.getOrigin() == zerobuf::render::Vector3f( 1, 0, 0 ));
     BOOST_CHECK( camera.getLookAt() == zerobuf::render::Vector3f( -1, 1, 0 ));
     BOOST_CHECK( camera.getUp() == zerobuf::render::Vector3f( 0, 0, 1 ));
-    BOOST_CHECK( camera != temporary );
+    BOOST_CHECK_NE( camera, temporary );
 }
 
 BOOST_AUTO_TEST_CASE(changeCamera)

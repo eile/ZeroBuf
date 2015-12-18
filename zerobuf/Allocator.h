@@ -27,6 +27,7 @@ public:
     virtual const uint8_t* getData() const = 0;
     virtual size_t getSize() const = 0;
     virtual void copyBuffer( const void* data, size_t size ) = 0;
+    virtual bool canMove() const { return false; } // allocation is moveable
 
     /**
      * Update allocation of the dynamic elem at index to have newSize bytes.
@@ -36,7 +37,10 @@ public:
      *
      * @return the pointer to the elem at the new place.
      */
-    virtual uint8_t* updateAllocation( size_t index, size_t newSize ) = 0;
+    virtual uint8_t* updateAllocation( size_t /*index*/, bool /*copy*/,
+                                       size_t /*newSize*/ )
+        { throw std::runtime_error( "Dynamic allocation not implemented" ); }
+
 
     template< class T > T* getItemPtr( const size_t offset )
         { return reinterpret_cast< T* >( getData() + offset ); }

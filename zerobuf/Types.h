@@ -27,6 +27,7 @@ struct Schema;
 class Zerobuf;
 
 typedef std::unique_ptr< Allocator > AllocatorPtr;
+typedef std::unique_ptr< const Allocator > ConstAllocatorPtr;
 
 template< class T > class ConstVector;
 template< class T > class Vector;

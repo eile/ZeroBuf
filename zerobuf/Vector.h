@@ -6,20 +6,24 @@
 #ifndef ZEROBUF_VECTOR_H
 #define ZEROBUF_VECTOR_H
 
-#include <zerobuf/BaseVector.h> // base class
+#include <zerobuf/DynamicSubAllocator.h> // used inline
+#include <zerobuf/Schema.h> // used inline
+#include <zerobuf/Zerobuf.h> // sfinae type
+
+#include <cstring> // memcmp
+#include <stdexcept> // std::runtime_error
+#include <typeinfo> // typeid
 
 namespace zerobuf
 {
 /**
- * Non-const vector
+ * STL-like vector abstraction for dynamic arrays in a zerobuf.
  *
  * @param T element type
  */
 template< class T >
-class Vector : public BaseVector< Allocator, T >
+class Vector
 {
-    typedef BaseVector< Allocator, T > Super;
-
 public:
     /**
      * @param alloc The parent allocator that contains the data.
@@ -28,33 +32,62 @@ public:
     Vector( Allocator& alloc, size_t index );
     ~Vector() {}
 
+    bool operator == ( const Vector& rhs ) const;
+    bool operator != ( const Vector& rhs ) const;
+
+    bool empty() const { return _getSize() == 0; }
+    uint64_t size() const { return _getSize() / _getElementSize< T >(); }
+    void clear() { _alloc->updateAllocation( _index, false, 0 ); }
+
+    T* data() { return _alloc->template getDynamic< T >( _index ); }
+    const T* data() const { return _alloc->template getDynamic< T >( _index ); }
+
     template< class Q = T >
-    typename std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type&
-    operator[] ( const size_t index )
+    const typename std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type&
+    operator[] ( const size_t index ) const
     {
-        if( index >= Super::size( ))
+        if( index >= size( ))
             throw std::runtime_error( "Vector out of bounds read" );
 
         return data()[ index ];
     }
 
     template< class Q = T >
-    typename std::enable_if<std::is_base_of<Zerobuf,Q>::value, Q>::type
+    typename std::enable_if< !std::is_base_of< Zerobuf, Q >::value, Q >::type&
     operator[] ( const size_t index )
     {
-        if( index >= Super::size( ))
+        if( index >= size( ))
             throw std::runtime_error( "Vector out of bounds read" );
 
-        // TODO OPT: Create a COW allocator, which uses the existing memory for
-        // gets until the first set is done, upon which it replaces itself with
-        // a copy to a NonMovingAllocator as below:
-        const uint8_t* base =
-            Super::_alloc.template getDynamic< uint8_t >( Super::_index );
-        const size_t elemSize = Super::template _getElementSize< Q >();
-        AllocatorPtr alloc( new NonMovingAllocator( elemSize, 0 ));
+        return data()[ index ];
+    }
 
-        alloc->copyBuffer( base + index * elemSize, elemSize );
-        return Q( std::move( alloc ));
+    template< class Q = T >
+    const typename std::enable_if< std::is_base_of<Zerobuf,Q>::value, Q >::type&
+    operator[] ( const size_t index ) const
+    {
+        if( index >= size( ))
+            throw std::runtime_error( "Vector out of bounds read" );
+
+        while( _zerobufs.size() < index + 1 )
+            _zerobufs.emplace_back( AllocatorPtr(
+                new ConstDynamicSubAllocator( *_alloc, _index, _zerobufs.size(),
+                                              _getElementSize< T >( ))));
+        return _zerobufs[ index ];
+    }
+
+    template< class Q = T >
+    typename std::enable_if< std::is_base_of< Zerobuf, Q >::value, Q >::type&
+    operator[] ( const size_t index )
+    {
+        if( index >= size( ))
+            throw std::runtime_error( "Vector out of bounds read" );
+
+        while( _zerobufs.size() < index + 1 )
+            _zerobufs.emplace_back( AllocatorPtr(
+                new DynamicSubAllocator( *_alloc, _index, _zerobufs.size(),
+                                         _getElementSize< T >( ))));
+        return _zerobufs[ index ];
     }
 
     template< class Q = T >
@@ -62,15 +95,11 @@ public:
                     std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type&
                     value )
     {
-        const size_t size_ = Super::_getSize();
-        const T* oldPtr = size_ == 0 ? nullptr : data();
+        const size_t size_ = _getSize();
         T* newPtr = reinterpret_cast< T* >(
-            Super::_alloc.updateAllocation( Super::_index,
-                                            size_ + sizeof( T )));
-        if( oldPtr && oldPtr != newPtr )
-            ::memcpy( newPtr, oldPtr, size_ );
-
-        newPtr[ size_ / Super::template _getElementSize< T >() ] = value;
+            _alloc->updateAllocation( _index, true /*copy*/,
+                                     size_ + sizeof( T )));
+        newPtr[ size_ / _getElementSize< T >() ] = value;
     }
 
     template< class Q = T >
@@ -78,42 +107,77 @@ public:
                     std::enable_if<std::is_base_of<Zerobuf,Q>::value, Q>::type&
                     value )
     {
-        const size_t size_ =  Super::_getSize();
-        const uint8_t* oldPtr = size_ == 0 ? nullptr :
-                                reinterpret_cast<const uint8_t*>( data( ));
-        uint8_t* newPtr = Super::_alloc.updateAllocation( Super::_index,
-                                                   size_ +
-                                                   value.getZerobufSize( ));
-        if( oldPtr && oldPtr != newPtr )
-            ::memcpy( newPtr, oldPtr, size_ );
-
+        const size_t size_ =  _getSize();
+        uint8_t* newPtr = _alloc->updateAllocation( _index, true /*copy*/,
+                                               size_ + value.getZerobufSize( ));
         ::memcpy( newPtr + size_, value.getZerobufData(),
                   value.getZerobufSize( ));
     }
 
-    T* data()
-        { return Super::_alloc.template getDynamic< T >( Super::_index ); }
-
-    void clear() { Super::_alloc.updateAllocation( Super::_index, 0 ); }
+    /** @internal */
+    void reset( Allocator& alloc ) { _alloc = &alloc; _zerobufs.clear(); }
 
 private:
+    Allocator* _alloc;
+    const size_t _index;
+    mutable std::vector< T > _zerobufs;
+
     Vector();
-    void _resize( const size_t size )
-        { Super::_alloc.updateAllocation( Super::_index, size ); }
+    size_t _getSize() const { return _alloc->getDynamicSize( _index ); }
+    void _resize( const size_t size_ )
+       { _alloc->updateAllocation( _index, true /*copy*/, size_ ); }
     void copyBuffer( uint8_t* data, size_t size );
+
+    template< class Q = T > size_t _getElementSize(
+        typename std::enable_if< std::is_base_of< Zerobuf, Q >::value,
+                                                  Q >::type* = 0 ) const
+    {
+        return Q::schema().staticSize;
+    }
+
+    template< class Q = T > size_t _getElementSize(
+        typename std::enable_if< !std::is_base_of< Zerobuf, Q >::value,
+                                                   Q >::type* = 0 ) const
+    {
+        return sizeof( Q );
+    }
 };
 
 // Implementation
 template< class T > inline
 Vector< T >::Vector( Allocator& alloc, const size_t index )
-    : BaseVector< Allocator, T >( alloc, index )
+    : _alloc( &alloc )
+    , _index( index )
 {}
 
 template< class T > inline
-void Vector< T >::copyBuffer( uint8_t* data_, size_t size )
+bool Vector< T >::operator == ( const Vector& rhs ) const
 {
-    void* to = Super::_alloc.updateAllocation( Super::_index, size );
+    if( this == &rhs )
+        return true;
+    const size_t size_ = _getSize();
+    if( size_ == 0 || size_ != rhs._getSize( ))
+        return false;
+    return ::memcmp( data(), rhs.data(), size_ ) == 0;
+}
+
+template< class T > inline
+bool Vector< T >::operator != ( const Vector& rhs ) const
+{
+    return !(operator == ( rhs ));
+}
+
+template< class T > inline
+void Vector< T >::copyBuffer( uint8_t* data_, size_t size_ )
+{
+    void* to = _alloc->updateAllocation( _index, false /*no copy*/, size_ );
     ::memcpy( to, data_, size );
+}
+
+template< class T > inline
+std::ostream& operator << ( std::ostream& os, const Vector< T >& vector )
+{
+    return os << typeid( vector ).name() << " of size " << vector.size();
 }
 
 }

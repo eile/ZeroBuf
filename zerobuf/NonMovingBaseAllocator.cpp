@@ -8,6 +8,7 @@
 #include <map>
 #include <cassert>
 #include <algorithm>
+#include <string.h>
 
 namespace zerobuf
 {
@@ -21,8 +22,24 @@ NonMovingBaseAllocator::NonMovingBaseAllocator( const size_t staticSize,
 NonMovingBaseAllocator::~NonMovingBaseAllocator()
 {}
 
-uint8_t* NonMovingBaseAllocator::updateAllocation( const size_t index,
-                                                   const size_t newSize )
+uint8_t* NonMovingBaseAllocator::_moveAllocation(
+    const size_t index, const bool copy, const size_t newOffset,
+    const size_t newSize )
+{
+    uint64_t& offset = _getOffset( index );
+    uint64_t& size = _getSize( index );
+    uint8_t* base = getData();
+
+    if( copy && offset > 0 )
+        ::memcpy( base + newOffset, base + offset, std::min( size, newSize ));
+
+    offset = newOffset;
+    size = newSize;
+    return base + newOffset;
+}
+
+uint8_t* NonMovingBaseAllocator::updateAllocation(
+    const size_t index, const bool copy, const size_t newSize )
 {
     uint64_t& oldOffset = _getOffset( index );
     uint64_t& oldSize = _getSize( index );
@@ -30,7 +47,11 @@ uint8_t* NonMovingBaseAllocator::updateAllocation( const size_t index,
     if( oldSize >= newSize ) // enough space, update and return
     {
         oldSize = newSize;
-        return getData() + oldOffset;
+        if( newSize > 0 )
+            return getData() + oldOffset;
+
+        oldOffset = 0;
+        return nullptr;
     }
 
     if( oldOffset != 0 ) // Check for space in current place
@@ -66,11 +87,7 @@ uint8_t* NonMovingBaseAllocator::updateAllocation( const size_t index,
     {
         assert( i->first >= start );
         if( i->first - start >= newSize )
-        {
-            oldOffset = start;
-            oldSize = newSize;
-            return getData() + start;
-        }
+            return _moveAllocation( index, copy, start, newSize );
 
         start = i->first + i->second;
     }
@@ -78,10 +95,7 @@ uint8_t* NonMovingBaseAllocator::updateAllocation( const size_t index,
     // realloc space at the end
     _resize( start + newSize );
 
-    // reload address of [offset, size] due to potential realloc
-    _getOffset( index ) = start;
-    _getSize( index ) = newSize;
-    return getData() + start;
+    return _moveAllocation( index, copy, start, newSize );
 }
 
 }

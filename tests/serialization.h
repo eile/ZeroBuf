@@ -4,8 +4,6 @@
  */
 
 #include <testSchema.h>
-#include <zerobuf/ConstVector.h>
-#include <zerobuf/Vector.h>
 
 #define SETVALUES(type, name) \
     const std::vector< type > name##Vector { type(1), type(1), type(2), type(3) }; \
@@ -71,7 +69,7 @@ test::TestSchema getTestObject()
     object.setEnumerations( testEnums );
 
     int32_t intMagic = 42;
-    uint32_t uintMagic = 43;
+    uint32_t uintMagic = 4200;
 
     // Write nested table using a stack object
     test::TestNested nested;
@@ -88,19 +86,21 @@ test::TestSchema getTestObject()
     }
     object.setNestedarray( nesteds );
 
+    // Dynamic tables
     intMagic = 42;
-    uintMagic = 43;
-
-    // Setting dynamic tables
+    uintMagic = 4200;
     std::vector< test::TestNested > nestedDyn;
-    for( size_t i = 0; i < 2; ++i  )
+    for( size_t i = 0; i < 5; ++i  )
+        nestedDyn.push_back( test::TestNested( intMagic++, uintMagic++ ));
+    object.setNesteddynamic( nestedDyn );
+
+    for( size_t i = 0; i < 5; ++i  )
     {
         test::TestNested inner;
         inner.setIntvalue( intMagic++ );
         inner.setUintvalue( uintMagic++ );
-        nestedDyn.push_back( inner );
+        object.getNesteddynamic().push_back( inner );
     }
-    object.setNesteddynamic( nestedDyn );
 
     return object;
 }
@@ -108,7 +108,7 @@ test::TestSchema getTestObject()
 void checkTestObject( const test::TestNested& nested )
 {
     BOOST_CHECK_EQUAL( nested.getIntvalue(), 42 );
-    BOOST_CHECK_EQUAL( nested.getUintvalue(), 43 );
+    BOOST_CHECK_EQUAL( nested.getUintvalue(), 4200 );
 }
 
 void checkTestObject( const test::TestSchema& object )
@@ -147,7 +147,7 @@ void checkTestObject( const test::TestSchema& object )
     // Test retrieved tables
     const auto& tables = object.getNestedarray();
     int32_t intMagic = 42;
-    uint32_t uintMagic = 43;
+    uint32_t uintMagic = 4200;
     for( const auto& inner : tables )
     {
         BOOST_CHECK_EQUAL( inner.getIntvalue(), intMagic++ );
@@ -156,15 +156,13 @@ void checkTestObject( const test::TestSchema& object )
 
     // Test retrieved dynamic tables
     intMagic = 42;
-    uintMagic = 43;
-    ::zerobuf::ConstVector< test::TestNested > dynamicTables =
-          object.getNesteddynamic();
+    uintMagic = 4200;
+    const test::TestSchema::Nesteddynamic& dynamicTables =
+        object.getNesteddynamic();
     for( size_t i = 0; i < dynamicTables.size(); ++i )
     {
         const test::TestNested& inner = dynamicTables[i];
         BOOST_CHECK_EQUAL( inner.getIntvalue(), intMagic++ );
         BOOST_CHECK_EQUAL( inner.getUintvalue(), uintMagic++  );
     }
-
-    BOOST_REQUIRE_THROW( dynamicTables.data(), std::runtime_error );
 }

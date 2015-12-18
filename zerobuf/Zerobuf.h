@@ -77,6 +77,9 @@ public:
     ZEROBUF_API bool operator == ( const Zerobuf& rhs ) const;
     ZEROBUF_API bool operator != ( const Zerobuf& rhs ) const;
 
+    /** @internal */
+    void reset( AllocatorPtr allocator ) { _allocator.swap( allocator ); }
+
 protected:
     explicit Zerobuf( AllocatorPtr alloc ); // takes ownership of alloc
     ZEROBUF_API virtual ~Zerobuf();
@@ -93,6 +96,11 @@ private:
     Zerobuf() = delete;
     Zerobuf( const Zerobuf& zerobuf ) = delete;
 };
+
+inline std::ostream& operator << ( std::ostream& os, const Zerobuf& zerobuf )
+{
+    return os << zerobuf.toJSON();
+}
 
 }
 

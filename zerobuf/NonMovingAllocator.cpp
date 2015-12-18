@@ -18,7 +18,8 @@ NonMovingAllocator::NonMovingAllocator( const size_t staticSize,
     : NonMovingBaseAllocator( staticSize, numDynamic )
     , _data( (uint8_t*)::calloc( 1, staticSize ))
     , _size( staticSize )
-{}
+{
+}
 
 NonMovingAllocator::~NonMovingAllocator()
 {

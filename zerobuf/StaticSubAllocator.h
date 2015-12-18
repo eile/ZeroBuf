@@ -29,7 +29,6 @@ private:
     size_t _offset;
     size_t _size;
 
-    uint8_t* updateAllocation( size_t index, size_t newSize ) final;
     StaticSubAllocatorBase( const StaticSubAllocatorBase< A >& ) = delete;
     StaticSubAllocatorBase< A >& operator = (
             const StaticSubAllocatorBase< A >& ) = delete;
