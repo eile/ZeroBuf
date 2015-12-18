@@ -12,8 +12,8 @@ import argparse
 import hashlib
 import re
 from pyparsing import *
-from sys import stdout, stderr, argv, exit
-from os import path
+import sys
+import os
 
 fbsBaseType = oneOf( "int uint float double byte short ubyte ushort ulong uint8_t uint16_t " +
                      "uint32_t uint64_t uint128_t int8_t int16_t int32_t int64_t bool string" )
@@ -222,7 +222,7 @@ def emitStaticMember( spec ):
                       "notifyChanging();\n    " +
                       "_{0} = value;".format( cxxname ))
         emit.members.append( "{0} _{1};".format( cxxtype, cxxname ));
-        emit.initializersStaticMember.append( [cxxname, cxxtype, emit.offset, elemSize] )
+        emit.initializersStatic.append( [cxxname, 1, cxxtype, emit.offset, elemSize] )
     else:
         emitFunction( cxxtype, "get" + cxxName + "() const",
                       "return getAllocator().template getItem< " + cxxtype +
@@ -260,7 +260,7 @@ def emitStaticArray( spec ):
 
     emit.md5.update( (cxxtype + str( nElems )).encode('utf-8') )
     if nElems < 2:
-        sys.exit( "Static array of size {0} not supported".format( nElems ))
+        sys.exit( "Static array of size {0} for field {1} not supported".format(nElems, cxxname))
     if elemSize == 0:
         sys.exit( "Static array of dynamic elements not implemented".
                   format( nElems ))
@@ -280,7 +280,7 @@ def emitStaticArray( spec ):
                       "notifyChanging();\n    " +
                       "_{0} = value;".format( cxxname ))
         emit.members.append( "{0} _{1};".format( cxxName, cxxname ))
-        emit.initializersStaticArray.append( [cxxname, nElems, cxxtype, emit.offset, elemSize] )
+        emit.initializersStatic.append( [cxxname, nElems, cxxtype, emit.offset, elemSize] )
 
     else:
         emitFunction( cxxtype + "*", "get" + cxxName + "()",
@@ -351,19 +351,18 @@ def emitStatic( spec ):
 
 def initializer_setters(emit):
     initializers = ''
-    # [cxxname, cxxtype, emit.offset, elemSize]
-    for initializer in emit.initializersStaticMember:
-        initializers += "    _{0} = std::move( {1}( ::zerobuf::AllocatorPtr( "\
-            "new ::zerobuf::StaticSubAllocator( getAllocator(), {2}, {3} ))));\n"\
-            .format(initializer[0], initializer[1], initializer[2], initializer[3])
-
     # [cxxname, nElems, cxxtype, emit.offset, elemSize]
-    for initializer in emit.initializersStaticArray:
-        initializers += "    _{0} = {1}".format(initializer[0], "{{")
-        for i in range(0, initializer[1]):
-            initializers += "\n        std::move( {0}( ::zerobuf::AllocatorPtr( "\
-                "new ::zerobuf::StaticSubAllocator( getAllocator(), {1}, {2} )))){3} "\
-                .format(initializer[2], initializer[3] + i * initializer[4], initializer[4], "}};\n" if i == initializer[1] - 1 else ",")
+    for initializer in emit.initializersStatic:
+        if initializer[1] == 1:
+            initializers += "    _{0} = std::move( {1}( ::zerobuf::AllocatorPtr( "\
+                "new ::zerobuf::StaticSubAllocator( getAllocator(), {2}, {3} ))));\n"\
+                .format(initializer[0], initializer[2], initializer[3], initializer[4])
+        else:
+            initializers += "    _{0} = {1}".format(initializer[0], "{{")
+            for i in range(0, initializer[1]):
+                initializers += "\n        std::move( {0}( ::zerobuf::AllocatorPtr( "\
+                    "new ::zerobuf::StaticSubAllocator( getAllocator(), {1}, {2} )))){3} "\
+                    .format(initializer[2], initializer[3] + i * initializer[4], initializer[4], "}};\n" if i == initializer[1] - 1 else ",")
 
     return initializers
 
@@ -371,19 +370,18 @@ def initializer_setters(emit):
 def initializer_list(emit):
     initializers = ''
 
-    # [cxxname, cxxtype, emit.offset, elemSize]
-    for initializer in emit.initializersStaticMember:
-        initializers += "    , _{0}( ::zerobuf::AllocatorPtr( "\
-            "new ::zerobuf::StaticSubAllocator( getAllocator(), {1}, {2} )))\n"\
-            .format(initializer[0], initializer[2], initializer[3])
-
     # [cxxname, nElems, cxxtype, emit.offset, elemSize]
-    for initializer in emit.initializersStaticArray:
-        initializers += "    , _{0}{1}".format(initializer[0], "{{")
-        for i in range( 0, initializer[1] ):
-            initializers += "\n        {0}( ::zerobuf::AllocatorPtr( "\
-                "new ::zerobuf::StaticSubAllocator( getAllocator(), {1}, {2} ))){3} "\
-                .format(initializer[2], initializer[3] + i * initializer[4], initializer[4], "}}\n" if i == initializer[1] - 1 else ",")
+    for initializer in emit.initializersStatic:
+        if initializer[1] == 1:
+            initializers += "    , _{0}( ::zerobuf::AllocatorPtr( "\
+                "new ::zerobuf::StaticSubAllocator( getAllocator(), {1}, {2} )))\n"\
+                .format(initializer[0], initializer[3], initializer[4])
+        else:
+            initializers += "    , _{0}{1}".format(initializer[0], "{{")
+            for i in range( 0, initializer[1] ):
+                initializers += "\n        {0}( ::zerobuf::AllocatorPtr( "\
+                    "new ::zerobuf::StaticSubAllocator( getAllocator(), {1}, {2} ))){3} "\
+                    .format(initializer[2], initializer[3] + i * initializer[4], initializer[4], "}}\n" if i == initializer[1] - 1 else ",")
 
     return initializers
 
@@ -441,8 +439,7 @@ def emit():
         emit.currentDyn = 0
         emit.defaultValues = ''
         emit.members = []
-        emit.initializersStaticMember = []
-        emit.initializersStaticArray = []
+        emit.initializersStatic = []
         emit.schema = []
         emit.nestedSchemas = set()
         emit.table = item[1]
@@ -611,9 +608,8 @@ def emit():
 
 
 if __name__ == "__main__":
-    if len(argv) < 2 :
-        stderr.write("ERROR - " + argv[0] + " - too few input arguments!")
-        exit(-1)
+    if len(sys.argv) < 2 :
+        sys.exit("ERROR - " + sys.argv[0] + " - too few input arguments!")
 
     parser = argparse.ArgumentParser( description =
                                       "zerobufCxx.py: A zerobuf C++ code generator for extended flatbuffers schemas" )
@@ -624,16 +620,15 @@ if __name__ == "__main__":
     # Parse, interpret and validate arguments
     args = parser.parse_args()
     if len(args.files) == 0 :
-        stderr.write("ERROR - " + argv[0] + " - no input .fbs files given!")
-        exit(-1)
+        sys.exit("ERROR - " + sys.argv[0] + " - no input .fbs files given!")
 
     for file in args.files:
-        basename = path.splitext( file )[0]
-        headerbase = path.basename( basename )
+        basename = os.path.splitext( file )[0]
+        headerbase = os.path.basename( basename )
         if args.outputdir:
             if args.outputdir == '-':
-                header = stdout
-                impl = stdout
+                header = sys.stdout
+                impl = sys.stdout
             else:
                 header = open( args.outputdir + "/" + headerbase + ".h", 'w' )
                 impl = open( args.outputdir + "/" + headerbase + ".cpp", 'w' )
