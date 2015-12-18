@@ -80,3 +80,15 @@ BOOST_AUTO_TEST_CASE(test_string)
     BOOST_CHECK_EQUAL( object.getStringvalue().size(), 0 );
     BOOST_CHECK_EQUAL( emptyMessage, object.getStringvalueString( ));
 }
+
+BOOST_AUTO_TEST_CASE(mutablePODArrays)
+{
+    test::TestSchema object;
+
+    object.setIntdynamic( std::vector< int32_t >{ 3, 4, 5 } );
+    object.getIntdynamic()[1] = 6;
+    BOOST_CHECK_EQUAL( object.getIntdynamic()[1], 6 );
+
+    object.getIntarray()[1] = 7;
+    BOOST_CHECK_EQUAL( object.getIntarray()[1], 7 );
+}

@@ -29,6 +29,35 @@ public:
     ~Vector() {}
 
     template< class Q = T >
+    typename std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type&
+    operator[] ( const size_t index )
+    {
+        if( index >= Super::size( ))
+            throw std::runtime_error( "Vector out of bounds read" );
+
+        return data()[ index ];
+    }
+
+    template< class Q = T >
+    typename std::enable_if<std::is_base_of<Zerobuf,Q>::value, Q>::type
+    operator[] ( const size_t index )
+    {
+        if( index >= Super::size( ))
+            throw std::runtime_error( "Vector out of bounds read" );
+
+        // TODO OPT: Create a COW allocator, which uses the existing memory for
+        // gets until the first set is done, upon which it replaces itself with
+        // a copy to a NonMovingAllocator as below:
+        const uint8_t* base =
+            Super::_alloc.template getDynamic< uint8_t >( Super::_index );
+        const size_t elemSize = Super::template _getElementSize< Q >();
+        AllocatorPtr alloc( new NonMovingAllocator( elemSize, 0 ));
+
+        alloc->copyBuffer( base + index * elemSize, elemSize );
+        return Q( std::move( alloc ));
+    }
+
+    template< class Q = T >
     void push_back( const typename
                     std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type&
                     value )
