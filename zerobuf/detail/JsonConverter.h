@@ -178,16 +178,40 @@ private:
     bool _fromZeroBuf( const Allocator& allocator, const Schema::Field& field,
                        const Schema& schema, Json::Value& jsonValue ) const
     {
-        const size_t offset = _getOffset( field );
         const size_t nElements = _getNElements( field );
 
         switch( nElements )
         {
         case 0: // dynamic array
-            throw std::runtime_error(
-                "Dynamic arrays of ZeroBuf objects not implemented" );
+        {
+            if( !_isStaticElement( field ))
+                throw std::runtime_error(
+                    "Dynamic arrays of dynamic Zerobufs not supported" );
+
+            const size_t elemSize = _getSize( field );
+            const size_t index = _getIndex( field );
+            const size_t arraySize = allocator.getDynamicSize( index ) /
+                                     elemSize ;
+            const size_t offset = allocator.getDynamicOffset( index );
+            jsonValue.resize( arraySize );
+
+            for( size_t i = 0; i < arraySize; ++i )
+            {
+                const ConstStaticSubAllocator subAllocator( allocator,
+                                                            offset + i*elemSize,
+                                                            elemSize );
+                if( !_fromZeroBufItem( subAllocator, schema,
+                                       jsonValue[ uint32_t( i )]))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         case 1:
         {
+            const size_t offset = _getOffset( field );
             const bool isRoot = offset == 0;
             if( _isStaticElement( field ))
             {
@@ -212,6 +236,7 @@ private:
                     "Static arrays of dynamic Zerobufs not supported" );
 
             jsonValue.resize( nElements );
+            const size_t offset = _getOffset( field );
             const size_t elemSize = _getSize( field );
 
             for( size_t i = 0; i < nElements; ++i )
@@ -246,18 +271,39 @@ private:
     bool _toZeroBuf( Allocator& allocator, const Schema::Field& field,
                      const Schema& schema, const Json::Value& jsonValue ) const
     {
-        const size_t offset = _getOffset( field );
         const size_t nElements = _getNElements( field );
 
         switch( nElements )
         {
         case 0: // dynamic array
-            throw std::runtime_error(
-                "Dynamic arrays of ZeroBuf objects not implemented" );
-            return false;
+        {
+            if( !_isStaticElement( field ))
+                throw std::runtime_error(
+                    "Dynamic arrays of dynamic Zerobufs not supported" );
+
+            const size_t index = _getIndex( field );
+            const size_t arraySize = jsonValue.size();
+            const size_t elemSize = _getSize( field );
+            allocator.updateAllocation( index, arraySize * elemSize );
+
+            const size_t offset = allocator.getDynamicOffset( index );
+            std::cout << offset << " " << elemSize << std::endl;
+            for( size_t i = 0; i < arraySize; ++i )
+            {
+                StaticSubAllocator subAllocator( allocator, offset + i*elemSize,
+                                                 elemSize );
+                if( !_toZeroBufItem( subAllocator, schema,
+                                     jsonValue[ uint32_t( i )]))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
 
         case 1:
         {
+            const size_t offset = _getOffset( field );
             const bool isRoot = offset == 0;
             if( _isStaticElement( field ))
             {
@@ -289,6 +335,7 @@ private:
                 return false;
             }
 
+            const size_t offset = _getOffset( field );
             const size_t elemSize = _getSize( field );
             for( size_t i = 0; i < nElements; ++i )
             {

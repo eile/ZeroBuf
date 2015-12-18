@@ -109,14 +109,17 @@ def emitDynamic( spec ):
                   format( cxxtype, cxxName ))
     # non-const, const pointer
     if cxxtype in emit.tables:
+        if elemSize == 0:
+            sys.exit("Dynamic arrays of empty ZeroBuf (field {0}) not supported".format(spec[0]))
+
         emitFunction( "typename " + emit.table + "::" + cxxName,
                       "get" + cxxName + "()",
                       "notifyChanging();\n    " +
-                      "return {0}( getAllocator(), getAllocator().getDynamicOffset({1}) );"
+                      "return {0}( getAllocator(), {1} );"
                       .format(cxxName, emit.currentDyn) )
         emitFunction( "typename " + emit.table + "::Const" + cxxName,
                       "get" + cxxName + "() const",
-                      "return Const{0}( getAllocator(), getAllocator().getDynamicOffset({1}) );"
+                      "return Const{0}( getAllocator(), {1} );"
                       .format(cxxName, emit.currentDyn) )
         # vector
         emitFunction( "std::vector< " + cxxtype + " >",
@@ -134,6 +137,7 @@ def emitDynamic( spec ):
                       "notifyChanging();\n    " +
                       "::zerobuf::Vector< ::zerobuf::Zerobuf > dynamic( getAllocator(), " +
                       str(emit.currentDyn) + ");\n" +
+                      "    dynamic.clear();\n" +
                       "    for( const " + cxxtype + "& data : values )\n" +
                       "        dynamic.push_back(data);\n" )
     else:
@@ -265,6 +269,9 @@ def emitStaticArray( spec ):
                   format( nElems ))
 
     if cxxtype in emit.tables:
+        if elemSize == 0:
+            sys.exit("Static arrays of empty ZeroBuf (field {0}) not supported".format(spec[0]))
+
         header.write( "    typedef std::array< {0}, {1} > {2};\n".
                       format( cxxtype, nElems, cxxName ))
         emitFunction( "const {0}::{1}&".format( emit.table, cxxName ),
