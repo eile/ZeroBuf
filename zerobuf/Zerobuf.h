@@ -32,10 +32,7 @@ public:
     /** @return the number of dynamics fields of this object. */
     virtual size_t getZerobufNumDynamics() const = 0;
 
-    /**
-     * @return the list schemas in case nested ZeroBuf objects are used in this
-     *         object.
-     */
+    /** @return the schemas describing this ZeroBuf object. */
     virtual Schemas getSchemas() const = 0;
 
     /** Called if any data in this object is about to change. */
@@ -66,15 +63,19 @@ public:
      */
     ZEROBUF_API bool fromJSON( const std::string& json );
 
-    /** Copy semantics */
+    /** Assignment operator. */
     ZEROBUF_API Zerobuf& operator = ( const Zerobuf& rhs );
 
-    /** Move semantics */
+    /** Move ctor. */
     ZEROBUF_API Zerobuf( Zerobuf&& rhs );
+
+    /** Move operator. May copy data if zerobuf is not movable */
     ZEROBUF_API Zerobuf& operator = ( Zerobuf&& rhs );
 
-    /** Compare semantics */
+    /** @return true if both objects contain the same data */
     ZEROBUF_API bool operator == ( const Zerobuf& rhs ) const;
+
+    /** @return true if both objects contain different data */
     ZEROBUF_API bool operator != ( const Zerobuf& rhs ) const;
 
     /** @internal */

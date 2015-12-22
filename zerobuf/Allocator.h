@@ -15,7 +15,7 @@ namespace zerobuf
  * Allocator base class and interface.
  *
  * Implements part of the binary data layout by providing access to the stored
- * elements.
+ * elements. Not intended to be used by application code.
  */
 class Allocator
 {

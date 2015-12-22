@@ -15,8 +15,14 @@ namespace zerobuf
 {
 
 /**
- * A runtime and optimized representation of the schema file input, which
- * describes the data layout of a ZeroBuf object.
+ * A runtime optimized representation of the schema file input.
+ *
+ * Describes the data layout of a zerobuf. The type identifier is either the MD5
+ * hash of the builtin C++ type (eg md5( "uint64_t" )) or the type identifier of
+ * a child schema. A Zerobuf returns a vector of its own and all child schemas,
+ * with its own schema in front.
+ *
+ * @sa Zerobuf::getSchemas()
  */
 struct Schema
 {

@@ -13,8 +13,8 @@
 namespace zerobuf
 {
 /** A zerobuf child allocator which does not move existing fields */
-template< class A > class NonMovingSubAllocatorBase :
-            public NonMovingBaseAllocator
+template< class A >
+class NonMovingSubAllocatorBase : public NonMovingBaseAllocator
 {
 public:
     ZEROBUF_API NonMovingSubAllocatorBase( A& parent, size_t index,
@@ -37,6 +37,9 @@ private:
         const NonMovingSubAllocatorBase< A >& ) = delete;
     void _resize( size_t newSize ) final;
 };
+
+typedef NonMovingSubAllocatorBase< Allocator > NonMovingSubAllocator;
+typedef NonMovingSubAllocatorBase< const Allocator > ConstNonMovingSubAllocator;
 
 }
 #endif

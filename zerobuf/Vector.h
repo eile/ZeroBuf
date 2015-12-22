@@ -32,16 +32,27 @@ public:
     Vector( Allocator& alloc, size_t index );
     ~Vector() {}
 
+    /** @return true if the two vectors are identical. */
     bool operator == ( const Vector& rhs ) const;
+    /** @return false if the two vectors are identical. */
     bool operator != ( const Vector& rhs ) const;
 
+    /** @return true if the vector contains no elements. */
     bool empty() const { return _getSize() == 0; }
+
+    /** @return the number of elements in the vector. */
     uint64_t size() const { return _getSize() / _getElementSize< T >(); }
+
+    /** Empty the vector. */
     void clear() { _alloc->updateAllocation( _index, false, 0 ); }
 
+    /** @return The pointer to the current allocation of the vector */
     T* data() { return _alloc->template getDynamic< T >( _index ); }
+
+    /** @return The pointer to the current allocation of the vector */
     const T* data() const { return _alloc->template getDynamic< T >( _index ); }
 
+    /** @return a builtin const element */
     template< class Q = T >
     const typename std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type&
     operator[] ( const size_t index ) const
@@ -52,6 +63,7 @@ public:
         return data()[ index ];
     }
 
+    /** @return a builtin element */
     template< class Q = T >
     typename std::enable_if< !std::is_base_of< Zerobuf, Q >::value, Q >::type&
     operator[] ( const size_t index )
@@ -62,6 +74,7 @@ public:
         return data()[ index ];
     }
 
+    /** @return a Zerobuf-derived const element */
     template< class Q = T >
     const typename std::enable_if< std::is_base_of<Zerobuf,Q>::value, Q >::type&
     operator[] ( const size_t index ) const
@@ -76,6 +89,7 @@ public:
         return _zerobufs[ index ];
     }
 
+    /** @return a Zerobuf-derived element */
     template< class Q = T >
     typename std::enable_if< std::is_base_of< Zerobuf, Q >::value, Q >::type&
     operator[] ( const size_t index )
@@ -90,6 +104,7 @@ public:
         return _zerobufs[ index ];
     }
 
+    /** Insert a builtin element at the end of the vector. */
     template< class Q = T >
     void push_back( const typename
                     std::enable_if<!std::is_base_of<Zerobuf,Q>::value, Q>::type&
@@ -102,6 +117,7 @@ public:
         newPtr[ size_ / _getElementSize< T >() ] = value;
     }
 
+    /** Insert a Zerobuf-derived element at the end of the vector. */
     template< class Q = T >
     void push_back( const typename
                     std::enable_if<std::is_base_of<Zerobuf,Q>::value, Q>::type&

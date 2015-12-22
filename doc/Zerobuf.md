@@ -1,10 +1,10 @@
 # Zerobuf Binary Encoding {#Binary}
 
 Nomenclature: A Zerobuf object is the instantiation of a class compiled
-from a schema file by the Zerobuf compiler. A zerobuf is the memory
-buffer of a Zerobuf object. It is a single memory allocation, i.e., a
-pointer with a size, and can be serialized as is without any additional
-transformation.
+from a schema file by the Zerobuf compiler. A zerobuf (lower case) is
+the memory buffer of a Zerobuf object. It is a single memory allocation,
+i.e., a pointer with a size, and can be serialized as is without any
+additional transformation.
 
 Zerobuf objects save all their member data in a single memory buffer in
 host endianness. It is the receiving node's responsibility to correct

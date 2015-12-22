@@ -14,12 +14,11 @@ namespace zerobuf
 {
 
 /**
- * A ZeroBuf object which can hold values that are described by the given
- * schema.
+ * A ZeroBuf object which holds values described by the given schemas.
  *
- * The main purpose is to create an object at runtime where the values can be
- * set and accessed via JSON w/o having the schema file nor the generated class
- * file available. Hence it does not provide any semantic methods.
+ * The main purpose is to create an object at runtime for JSON conversion using
+ * toJSON() and fromJSON() without having the schema file nor the generated
+ * class file available. Does not provide any semantic methods.
  */
 class Generic : public Zerobuf
 {
