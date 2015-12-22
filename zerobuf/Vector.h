@@ -187,7 +187,7 @@ template< class T > inline
 void Vector< T >::copyBuffer( uint8_t* data_, size_t size_ )
 {
     void* to = _alloc->updateAllocation( _index, false /*no copy*/, size_ );
-    ::memcpy( to, data_, size );
+    ::memcpy( to, data_, size_ );
 }
 
 template< class T > inline

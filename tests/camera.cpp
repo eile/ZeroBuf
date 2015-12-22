@@ -65,6 +65,24 @@ BOOST_AUTO_TEST_CASE(changeCamera)
     BOOST_CHECK_EQUAL( camera.getUp().getZ(), 1.f );
 }
 
+BOOST_AUTO_TEST_CASE(assignOther)
+{
+    zerobuf::render::Camera camera;
+    const zerobuf::render::Vector3f vector;
+    BOOST_CHECK_THROW( camera = vector, std::runtime_error );
+    BOOST_CHECK_THROW( camera = std::move( vector ), std::runtime_error );
+}
+
+BOOST_AUTO_TEST_CASE(assignSelf)
+{
+    zerobuf::render::Camera camera;
+    camera.setOrigin( zerobuf::render::Vector3f( 1.f, 0.f, 0.f ));
+
+    camera = camera;
+    BOOST_CHECK_EQUAL( camera.getOrigin(),
+                       zerobuf::render::Vector3f( 1.f, 0.f, 0.f ));
+
+}
 
 const std::string expectedJSON = "{\n"
                                  "   \"lookAt\" : {\n"
@@ -129,4 +147,6 @@ BOOST_AUTO_TEST_CASE(cameraJSON)
     zerobuf::render::Camera camera2;
     camera2.fromJSON( json );
     BOOST_CHECK( camera == camera2 );
+
+    BOOST_CHECK( !camera.fromJSON( "blubb" ));
 }

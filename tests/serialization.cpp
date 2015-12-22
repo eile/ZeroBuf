@@ -38,7 +38,8 @@ BOOST_AUTO_TEST_CASE(test_string)
     BOOST_CHECK( !object.getStringvalue().empty( ));
     BOOST_CHECK_EQUAL( object.getStringvalue().size(), 19 );
     BOOST_CHECK_EQUAL( message, object.getStringvalueString( ));
-    BOOST_CHECK_EQUAL( message.length(), object.getStringvalueString().length( ));
+    BOOST_CHECK_EQUAL( message.length(),
+                       object.getStringvalueString().length( ));
 
     test::TestSchema::Stringvalue objectString = object.getStringvalue();
     BOOST_CHECK_EQUAL( objectString[2], 'e' );
