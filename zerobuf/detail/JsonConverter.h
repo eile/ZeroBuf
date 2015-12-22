@@ -154,8 +154,8 @@ private:
         const auto& func = _toJSONMap.find( type );
         if( func == _toJSONMap.end( ))
         {
-            std::cerr << "Missing converter for type of field "
-                      << _getName( field ) << std::endl;
+            std::cerr << "Missing converter for type " << type.getShortString()
+                      << " of field " << _getName( field ) << std::endl;
             return false;
         }
         return func->second( allocator, field, jsonValue );
@@ -168,8 +168,8 @@ private:
         const auto& func = _fromJSONMap.find( type );
         if( func == _fromJSONMap.end( ))
         {
-            std::cerr << "Missing converter for type of field "
-                      << _getName( field ) << std::endl;
+            std::cerr << "Missing converter for type " << type.getShortString()
+                      << " of field " << _getName( field ) << std::endl;
             return false;
         }
         return func->second( allocator, field, jsonValue );
