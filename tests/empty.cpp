@@ -23,6 +23,7 @@ BOOST_AUTO_TEST_CASE(empty)
 
     BOOST_CHECK_THROW( empty2.copyZerobufData( &empty1, 42 ),
                        std::runtime_error );
-    BOOST_CHECK_THROW( empty2.toJSON(), std::runtime_error );
+    BOOST_CHECK_EQUAL( empty2.toJSON(), "{}" );
     BOOST_CHECK_THROW( empty2.fromJSON( "blubb" ), std::runtime_error );
+    BOOST_CHECK_NO_THROW( std::cout << empty1 );
 }

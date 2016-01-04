@@ -26,8 +26,8 @@ public:
 
 private:
     A& _parent;
-    size_t _offset;
-    size_t _size;
+    const size_t _offset;
+    const size_t _size;
 
     StaticSubAllocatorBase( const StaticSubAllocatorBase< A >& ) = delete;
     StaticSubAllocatorBase< A >& operator = (

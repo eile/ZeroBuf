@@ -11,7 +11,10 @@
 
 namespace zerobuf
 {
-/** A zerobuf child allocator which manages a dynamic sub-struct. */
+/**
+  * A zerobuf child allocator which manages a dynamic allocation of
+  * statically-sized members
+  */
 template< class A > class DynamicSubAllocatorBase : public Allocator
 {
 public:
@@ -26,9 +29,9 @@ public:
 
 private:
     A& _parent;
-    size_t _header;
-    size_t _element;
-    size_t _size;
+    const size_t _header;
+    const size_t _element;
+    const size_t _size;
 
     DynamicSubAllocatorBase( const DynamicSubAllocatorBase< A >& ) = delete;
     DynamicSubAllocatorBase< A >& operator = (

@@ -18,8 +18,7 @@ NonMovingSubAllocatorBase< A >::NonMovingSubAllocatorBase(
     : NonMovingBaseAllocator( staticSize, numDynamic )
     , _parent( parent )
     , _index( index )
-{
-}
+{}
 
 template< class A > NonMovingSubAllocatorBase< A >::~NonMovingSubAllocatorBase()
 {}

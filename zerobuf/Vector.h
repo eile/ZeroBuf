@@ -44,7 +44,11 @@ public:
     uint64_t size() const { return _getSize() / _getElementSize< T >(); }
 
     /** Empty the vector. */
-    void clear() { _alloc->updateAllocation( _index, false, 0 ); }
+    void clear()
+    {
+        _alloc->updateAllocation( _index, false, 0 );
+        _zerobufs.clear();
+    }
 
     /** @return The pointer to the current allocation of the vector */
     T* data() { return _alloc->template getDynamic< T >( _index ); }
@@ -113,7 +117,7 @@ public:
         const size_t size_ = _getSize();
         T* newPtr = reinterpret_cast< T* >(
             _alloc->updateAllocation( _index, true /*copy*/,
-                                     size_ + sizeof( T )));
+                                      size_ + sizeof( T )));
         newPtr[ size_ / _getElementSize< T >() ] = value;
     }
 
@@ -172,8 +176,10 @@ bool Vector< T >::operator == ( const Vector& rhs ) const
     if( this == &rhs )
         return true;
     const size_t size_ = _getSize();
-    if( size_ == 0 || size_ != rhs._getSize( ))
+    if( size_ != rhs._getSize( ))
         return false;
+    if( size_ == 0 )
+        return true;
     return ::memcmp( data(), rhs.data(), size_ ) == 0;
 }
 

@@ -99,7 +99,7 @@ void Zerobuf::copyZerobufData( const void* data, size_t size )
 std::string Zerobuf::toJSON() const
 {
     if( !_allocator )
-        throw std::runtime_error( "Can't convert empty Zerobuf object to JSON");
+        return "{}";
 
     Json::Value json;
     JSONConverter converter( getSchemas( ));

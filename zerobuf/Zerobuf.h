@@ -100,7 +100,7 @@ private:
 
 inline std::ostream& operator << ( std::ostream& os, const Zerobuf& zerobuf )
 {
-    return os << zerobuf.toJSON();
+    return os << zerobuf.getZerobufType() << ": " << zerobuf.toJSON();
 }
 
 }

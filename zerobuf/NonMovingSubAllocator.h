@@ -30,7 +30,7 @@ public:
 
 private:
     A& _parent;
-    size_t _index;
+    const size_t _index;
 
     NonMovingSubAllocatorBase( const NonMovingSubAllocatorBase< A >& ) = delete;
     NonMovingSubAllocatorBase< A >& operator = (

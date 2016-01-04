@@ -210,7 +210,7 @@ private:
             return true;
         }
 
-        case 1:
+        case 1: // single element
         {
             const size_t offset = _getOffset( field );
             const bool isRoot = offset == 0;
@@ -302,7 +302,7 @@ private:
             return true;
         }
 
-        case 1:
+        case 1: // single element
         {
             const size_t offset = _getOffset( field );
             const bool isRoot = offset == 0;
@@ -439,7 +439,7 @@ private:
 
         case 1: // single element
             return _toPODItem< T >( allocator.getItem<T>( offset ),
-                                       jsonValue );
+                                    jsonValue );
 
         default: // static array
         {

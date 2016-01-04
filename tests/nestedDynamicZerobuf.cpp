@@ -27,8 +27,8 @@ BOOST_AUTO_TEST_CASE(copyConstructTestNestedZerobuf)
     BOOST_CHECK_EQUAL( testNestedZerobuf.getNested().size(), 1 );
 
     const test::TestNestedZerobuf::Nested& nested=testNestedZerobuf.getNested();
-    BOOST_CHECK( nested[0] == test::TestNested( 1, 2 ));
-    BOOST_CHECK( temporary == testNestedZerobuf );
+    BOOST_CHECK_EQUAL( nested[0], test::TestNested( 1, 2 ));
+    BOOST_CHECK_EQUAL( temporary, testNestedZerobuf );
 }
 
 BOOST_AUTO_TEST_CASE(moveConstructTestNestedZerobuf)
@@ -37,47 +37,60 @@ BOOST_AUTO_TEST_CASE(moveConstructTestNestedZerobuf)
     temporary.getNested().push_back( test::TestNested( 1, 2 ));
     test::TestNestedZerobuf testNestedZerobuf( std::move( temporary ));
 
-    BOOST_CHECK( testNestedZerobuf.getNested().size() == 1 );
-    BOOST_CHECK( testNestedZerobuf.getNested()[0] == test::TestNested( 1, 2 ));
-    BOOST_CHECK( temporary != testNestedZerobuf );
+    BOOST_CHECK_EQUAL( testNestedZerobuf.getNested().size(), 1 );
+    BOOST_CHECK_EQUAL( testNestedZerobuf.getNested()[0],
+                       test::TestNested( 1, 2 ));
+    BOOST_CHECK_NE( temporary, testNestedZerobuf );
     BOOST_CHECK( temporary.getNested().empty( ));
 
     temporary = std::move( testNestedZerobuf );
-    BOOST_CHECK( temporary.getNested().size() == 1 );
-    BOOST_CHECK( temporary.getNested()[0] == test::TestNested( 1, 2 ));
-    BOOST_CHECK( temporary != testNestedZerobuf );
+    BOOST_CHECK_EQUAL( temporary.getNested().size(), 1 );
+    BOOST_CHECK_EQUAL( temporary.getNested()[0],
+                       test::TestNested( 1, 2 ));
+    BOOST_CHECK_NE( temporary, testNestedZerobuf );
     BOOST_CHECK( testNestedZerobuf.getNested().empty( ));
 }
 
 BOOST_AUTO_TEST_CASE(changeTestNestedZerobuf)
 {
     test::TestNestedZerobuf object;
-    const test::TestNestedZerobuf& constObject = object;
     object.getNested().push_back( test::TestNested( 1, 2 ));
 
     test::TestNested threeFour( 3, 4 );
     object.getNested()[0] = threeFour;
-    BOOST_CHECK( object.getNested()[0] == test::TestNested( 3, 4 ));
-    BOOST_CHECK( threeFour == test::TestNested( 3, 4 ));
-    BOOST_CHECK( object.getNested()[0] == threeFour );
+    BOOST_CHECK_EQUAL( object.getNested()[0], test::TestNested( 3, 4 ));
+    BOOST_CHECK_EQUAL( threeFour, test::TestNested( 3, 4 ));
+    BOOST_CHECK_EQUAL( object.getNested()[0], threeFour );
 
     object.getNested()[0] = test::TestNested( 8, 9 );
-    BOOST_CHECK( object.getNested()[0] == test::TestNested( 8, 9 ));
+    BOOST_CHECK_EQUAL( object.getNested()[0], test::TestNested( 8, 9 ));
 
     object.getNested()[0] = std::move( test::TestNested( 10, 11 ));
-    BOOST_CHECK( object.getNested()[0] == test::TestNested( 10, 11 ));
+    BOOST_CHECK_EQUAL( object.getNested()[0], test::TestNested( 10, 11 ));
 
     object.getNested()[0] = std::move( threeFour );
-    BOOST_CHECK( object.getNested()[0] == test::TestNested( 3, 4 ));
-    BOOST_CHECK( object.getNested()[0] != threeFour );
+    BOOST_CHECK_EQUAL( object.getNested()[0], test::TestNested( 3, 4 ));
+    BOOST_CHECK_NE( object.getNested()[0], threeFour );
 
-    object.setNested( { test::TestNested( 6, 7 ) });;
-    BOOST_CHECK( constObject.getNested()[0] == test::TestNested( 6, 7 ));
-    BOOST_CHECK( object.getNested()[0] == test::TestNested( 6, 7 ));
+    object.setNested( { test::TestNested( 6, 7 ) });
+    const test::TestNestedZerobuf& constObject = object;
+    BOOST_CHECK_EQUAL( constObject.getNested()[0], test::TestNested( 6, 7 ));
+    BOOST_CHECK_EQUAL( object.getNested()[0], test::TestNested( 6, 7 ));
 
     object.getNested()[0].setIntvalue( 5 );
-    BOOST_CHECK( constObject.getNested()[0] == test::TestNested( 5, 7 ));
-    BOOST_CHECK( object.getNested()[0] == test::TestNested( 5, 7 ));
+    BOOST_CHECK_EQUAL( constObject.getNested()[0], test::TestNested( 5, 7 ));
+    BOOST_CHECK_EQUAL( object.getNested()[0], test::TestNested( 5, 7 ));
+}
+
+BOOST_AUTO_TEST_CASE(clearVector)
+{
+    test::TestNestedZerobuf temporary;
+    temporary.getNested().push_back( test::TestNested( 1, 2 ));
+    temporary.getNested().push_back( test::TestNested( 3, 4 ));
+    BOOST_CHECK_EQUAL( temporary.getNested().size(), 2 );
+
+    temporary.getNested().clear();
+    BOOST_CHECK_EQUAL( temporary.getNested().size(), 0 );
 }
 
 const std::string expectedJSON =
@@ -119,7 +132,7 @@ BOOST_AUTO_TEST_CASE(genericToTestNestedZerobuf)
     expected.getNested().push_back( test::TestNested( 1, 2 ));
     expected.getNested().push_back( test::TestNested( 10, 20 ));
     const test::TestNestedZerobuf testNestedZerobuf( generic );
-    BOOST_CHECK( testNestedZerobuf == expected );
+    BOOST_CHECK_EQUAL( testNestedZerobuf, expected );
     BOOST_CHECK_EQUAL( testNestedZerobuf.getZerobufNumDynamics(),
                        generic.getZerobufNumDynamics( ));
     BOOST_CHECK_EQUAL( testNestedZerobuf.getZerobufStaticSize(),
@@ -137,5 +150,5 @@ BOOST_AUTO_TEST_CASE(testNestedZerobufJSON)
 
     test::TestNestedZerobuf testNestedZerobuf2;
     testNestedZerobuf2.fromJSON( json );
-    BOOST_CHECK( testNestedZerobuf == testNestedZerobuf2 );
+    BOOST_CHECK_EQUAL( testNestedZerobuf, testNestedZerobuf2 );
 }
