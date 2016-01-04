@@ -54,6 +54,22 @@ BOOST_AUTO_TEST_CASE(moveConstructCamera)
     BOOST_CHECK_NE( camera, temporary );
 }
 
+BOOST_AUTO_TEST_CASE(moveCamera)
+{
+    zerobuf::render::Camera temporary;
+    zerobuf::render::Vector3f origin( 1, 0, 0 );
+    temporary.getOrigin() = std::move( origin );
+    temporary.setLookAt( std::move( zerobuf::render::Vector3f( -1, 1, 0 )));
+    temporary.setUp( std::move( zerobuf::render::Vector3f( 0, 0, 1 )));
+
+    zerobuf::render::Camera camera;
+    camera = std::move( temporary );
+    BOOST_CHECK( camera.getOrigin() == zerobuf::render::Vector3f( 1, 0, 0 ));
+    BOOST_CHECK( camera.getLookAt() == zerobuf::render::Vector3f( -1, 1, 0 ));
+    BOOST_CHECK( camera.getUp() == zerobuf::render::Vector3f( 0, 0, 1 ));
+    BOOST_CHECK_NE( camera, temporary );
+}
+
 BOOST_AUTO_TEST_CASE(changeCamera)
 {
     zerobuf::render::Camera camera;

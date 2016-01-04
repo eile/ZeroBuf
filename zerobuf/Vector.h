@@ -25,7 +25,7 @@ template< class T >
 class Vector
 {
 public:
-    /**
+    /** @internal
      * @param alloc The parent allocator that contains the data.
      * @param index Index of the vector in the parent allocator dynamic storage
      */
@@ -142,7 +142,10 @@ private:
     const size_t _index;
     mutable std::vector< T > _zerobufs;
 
-    Vector();
+    Vector() = delete;
+    Vector( const Vector& rhs ) = delete;
+    Vector( const Vector&& rhs ) = delete;
+
     size_t _getSize() const { return _alloc->getDynamicSize( _index ); }
     void _resize( const size_t size_ )
        { _alloc->updateAllocation( _index, true /*copy*/, size_ ); }

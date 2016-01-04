@@ -49,6 +49,16 @@ BOOST_AUTO_TEST_CASE(moveConstructTestNestedZerobuf)
                        test::TestNested( 1, 2 ));
     BOOST_CHECK_NE( temporary, testNestedZerobuf );
     BOOST_CHECK( testNestedZerobuf.getNested().empty( ));
+
+    temporary = std::move( temporary );
+    BOOST_CHECK_EQUAL( temporary.getNested().size(), 1 );
+    BOOST_CHECK_EQUAL( temporary.getNested()[0],
+                       test::TestNested( 1, 2 ));
+    BOOST_CHECK_NE( temporary, testNestedZerobuf );
+    BOOST_CHECK( testNestedZerobuf.getNested().empty( ));
+
+    BOOST_CHECK_THROW( temporary = std::move( test::TestNested( )),
+                       std::runtime_error );
 }
 
 BOOST_AUTO_TEST_CASE(changeTestNestedZerobuf)
@@ -80,17 +90,29 @@ BOOST_AUTO_TEST_CASE(changeTestNestedZerobuf)
     object.getNested()[0].setIntvalue( 5 );
     BOOST_CHECK_EQUAL( constObject.getNested()[0], test::TestNested( 5, 7 ));
     BOOST_CHECK_EQUAL( object.getNested()[0], test::TestNested( 5, 7 ));
+    BOOST_CHECK_EQUAL( object.getNested()[0].getZerobufSize(), 12 );
 }
 
-BOOST_AUTO_TEST_CASE(clearVector)
+BOOST_AUTO_TEST_CASE(vector)
 {
     test::TestNestedZerobuf temporary;
+    const test::TestNestedZerobuf& constTemp = temporary;
     temporary.getNested().push_back( test::TestNested( 1, 2 ));
     temporary.getNested().push_back( test::TestNested( 3, 4 ));
+
+
     BOOST_CHECK_EQUAL( temporary.getNested().size(), 2 );
+    BOOST_CHECK_EQUAL( temporary.getNested(), constTemp.getNested( ));
+    BOOST_CHECK_THROW( temporary.getNested()[42], std::runtime_error );
+    BOOST_CHECK_THROW( constTemp.getNested()[42], std::runtime_error );
+
+    test::TestNestedZerobuf temporary2;
+    BOOST_CHECK_NE( temporary.getNested(), temporary2.getNested( ));
 
     temporary.getNested().clear();
     BOOST_CHECK_EQUAL( temporary.getNested().size(), 0 );
+    BOOST_CHECK( temporary.getNested().empty( ));
+    BOOST_CHECK_EQUAL( temporary.getNested(), temporary2.getNested( ));
 }
 
 const std::string expectedJSON =
