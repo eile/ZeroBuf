@@ -1,14 +1,15 @@
 
-/* Copyright (c) 2015-2016, Human Brain Project
+/* Copyright (c) 2015-2017, Human Brain Project
  *                          Stefan.Eilemann@epfl.ch
  */
 
 #ifndef ZEROBUF_TYPES_H
 #define ZEROBUF_TYPES_H
 
-#include <memory>
 #include <servus/serializable.h> // nested Data class
 #include <servus/types.h>
+
+#include <memory>
 
 /**
  * Zero-copy, zero-serialize, zero-hassle protocol buffers.
@@ -25,8 +26,12 @@ class Allocator;
 class NonMovingAllocator;
 class NonMovingBaseAllocator;
 class Zerobuf;
+
 template <class T>
-class Vector;
+class STLAllocator;
+
+template <class T>
+using Vector = std::vector<T, STLAllocator<T>>;
 
 typedef std::unique_ptr<Allocator> AllocatorPtr;
 typedef std::unique_ptr<const Allocator> ConstAllocatorPtr;

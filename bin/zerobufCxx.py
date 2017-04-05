@@ -1407,8 +1407,6 @@ class FbsTable():
     def compact_function(self):
         # Recursive compaction
         compact = ''
-        for dynamic_member in self.dynamic_members:
-            compact += "    _{0}.compact( threshold );\n".format(dynamic_member.name)
         compact += "    ::zerobuf::Zerobuf::compact( threshold );"
         compact = compact[4:]
         return Function("void", "compact( float threshold = 0.1f ) final", compact)
@@ -1455,10 +1453,6 @@ class FbsTable():
 
     def get_move_initializer(self):
         initializers = ''
-        # [name, nElems, cxxtype, offset|index, elem_size]
-        for initializer in self.initializers:
-            if initializer[1] == 0: # dynamic array
-                initializers += "    , _{0}( getAllocator(), {1} )\n".format(initializer[0], initializer[3])
         initializers += "{\n"
         initializers += self.get_move_operator()
         initializers += "}"
@@ -1470,7 +1464,7 @@ class FbsTable():
         # [name, nElems, cxxtype, offset, elem_size]
         for initializer in self.initializers:
             if initializer[1] == 0: # dynamic array
-                initializers += "    , _{0}( getAllocator(), {1} )\n".format(initializer[0], initializer[3])
+                initializers += "    , _{0}( zerobuf::STLAllocator< {1} >( getAllocator(), {2} ))\n".format(initializer[0], initializer[2], initializer[3])
             elif initializer[1] == 1: # single member
                 if initializer[4] == 0: # dynamic member
                     allocator = "::zerobuf::NonMovingSubAllocator( getAllocator(), {0}, {1}::ZEROBUF_NUM_DYNAMICS(), {1}::ZEROBUF_STATIC_SIZE( ))".format(initializer[3], initializer[2])
