@@ -199,20 +199,20 @@ class Function():
         if not self.split_implementation:
             return
         has_final = re.compile(r" final$").match(self.function)
-        
+
         impl_function = re.sub(r" final$", "", self.function) # remove ' final' keyword
         impl_function = re.sub(r" = [0-9\.f]+ ", " ", impl_function) # remove default params
 
         next_line(file)
-        
+
         if self.ret_val: # '{}'-less body
             add_before_inline = ""
             add_after_inline = ""
             if inline_implementation:
                 add_before_inline = "inline " if not (self.ret_val.startswith("template<>") or has_final) else ""
                 add_after_inline = "inline " if self.ret_val.startswith("template<>") and not (has_final) else ""
-            
-            file.write('{0}{1} {2}{3}{4}\n{{'.format(add_before_inline, self.ret_val, 
+
+            file.write('{0}{1} {2}{3}{4}\n{{'.format(add_before_inline, self.ret_val,
                 add_after_inline, (classname + '::') if classname else '', impl_function))
             next_line_indent(file)
             file.write(self.body)
@@ -1157,6 +1157,7 @@ class FbsTable():
         setters = []
         for member in self.all_members:
             valueName = member.name + 'Value'
+            if valueName[0].isdigit(): valueName = "a" + valueName;
             memberArgs.append("const {0}& {1}".format(member.get_cxxtype(), valueName))
             setters.append("set{0}( {1} );".format(member.cxxName, valueName))
         functions.append(Function(None,
